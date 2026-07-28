@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LiveSplit's update manifest.
+
+  How it is used: the factory's XMLURL points at this file on
+  raw.githubusercontent.com, LiveSplit compares the newest <update version> here
+  against the version compiled into InfiniteSplitter.dll, and downloads each
+  <file path> from UpdateURL + path. So the paths below are repository-relative,
+  and the DLLs they name have to be COMMITTED under Components/ — the updater
+  fetches the built artefacts from the repo, not from a GitHub release.
+
+  Newest version first; LiveSplit reads the list in order.
+-->
+<updates>
+    <update version="0.1.0">
+        <files>
+            <file path="Components/InfiniteSplitter.dll" status="changed"/>
+        </files>
+        <changelog>
+            <change>First release.</change>
+            <change>Ships as a single DLL: one file to copy into LiveSplit's Components folder.</change>
+            <change>In-game time driven into LiveSplit's Game Time, read from the game's memory with nothing installed into the game folder.</change>
+            <change>Auto-splitting on a configurable trigger language over flags, skills, collectibles, activations and scenes.</change>
+            <change>The active scene is read live, so scene: splits fire at the door rather than at the next save.</change>
+        </changelog>
+    </update>
+</updates>

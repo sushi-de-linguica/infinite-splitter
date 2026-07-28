@@ -1,0 +1,10 @@
+*.Identifier
+deploy.sh
+test.sh
+
+# build output
+bin/
+obj/
+
+# release zip
+dist/

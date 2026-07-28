@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Offline harness and live attach tool. Two jobs in one binary:
+
+      * on Linux, the selftest mode runs the whole suite with no game and no
+        LiveSplit (docs/testing.md). "make all" runs it as a gate.
+      * published for win-x64, the attach modes dump, watch and evaluate triggers
+        against the running game, with LiveSplit out of the picture.
+
+    It references InfiniteMemory rather than re-declaring anything, so the
+    harness and the shipped component cannot drift apart.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>splitcheck</AssemblyName>
+    <RootNamespace>InfiniteSplitter.Tools</RootNamespace>
+    <Nullable>disable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/InfiniteMemory/InfiniteMemory.csproj" />
+  </ItemGroup>
+
+</Project>
