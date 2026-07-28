@@ -83,3 +83,5 @@ memory layer with no LiveSplit reference, `Result`/`RefreshError` instead of
 exceptions, and a process hook with `Hooked`/`Exited` — follows
 [SoulSplitter](https://github.com/FrankvdStam/SoulSplitter) by FrankvdStam. The
 code here is our own; the design lessons are theirs.
+
+And Thanks for [Nyk_Style](https://www.speedrun.com/users/Nyk_Style) for testing!
