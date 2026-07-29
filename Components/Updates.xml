@@ -12,6 +12,17 @@
   Newest version first; LiveSplit reads the list in order.
 -->
 <updates>
+    <update version="1.0.0">
+        <files>
+            <file path="Components/InfiniteSplitter.dll" status="changed"/>
+        </files>
+        <changelog>
+            <change>A run now ends on the ending you choose rather than on the elder's death — the default route's last split is ending:any.</change>
+            <change>New ending: trigger, taking 1, 2 or any, for splitting on which of the two endings a run took.</change>
+            <change>New End presets: Any ending, Ending 1, Ending 2, Credits roll, and Post-credits for 100 % routes.</change>
+            <change>New Area preset: Enter Lobby.</change>
+        </changelog>
+    </update>
     <update version="0.1.0">
         <files>
             <file path="Components/InfiniteSplitter.dll" status="changed"/>
