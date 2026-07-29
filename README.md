@@ -5,6 +5,8 @@ Time, plus auto-splitting. It reads the game's memory from outside the process â
 nothing is installed into the game folder, nothing is injected, nothing is
 written.
 
+<img width="984" height="668" alt="image" src="https://github.com/user-attachments/assets/43cf6b5b-b313-49f7-95cc-6e83a6cf7f39" />
+
 ## Install
 
 1. Close LiveSplit â€” it locks component DLLs while running.
