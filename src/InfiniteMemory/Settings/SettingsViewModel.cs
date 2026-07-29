@@ -71,7 +71,12 @@ namespace InfiniteSplitter.Settings
             new SettingsViewModel { Splits = DefaultSplits() };
 
         /// <summary>The seven bosses in route order, each the gate for the ability that
-        /// opens the next stretch.</summary>
+        /// opens the next stretch, closed by the ending the player chose.
+        ///
+        /// The last row is deliberately not the `credits` latch: that latch rises on the
+        /// elder's death, in the same tick as the Elder row above it, which would end the
+        /// run while it is still being played. It stops at the ending rather than at the
+        /// credits so the timer does not run through a cutscene nobody is playing.</summary>
         public static List<SplitEntry> DefaultSplits() => new List<SplitEntry>
         {
             new SplitEntry("Sword", "flag:sword"),
@@ -82,7 +87,7 @@ namespace InfiniteSplitter.Settings
             new SplitEntry("Kairuz", "flag:kairuzBestiary"),
             new SplitEntry("Etrom", "flag:etromBestiary"),
             new SplitEntry("Elder", "flag:elderBestiary"),
-            new SplitEntry("End", "credits"),
+            new SplitEntry("End", "ending:any"),
         };
 
         public SettingsViewModel Copy()

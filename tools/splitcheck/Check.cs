@@ -35,5 +35,21 @@ namespace InfiniteSplitter.Tools
             Console.WriteLine("  ERROR " + what);
             return 1;
         }
+
+        /// <summary>
+        /// The game's build list, in build order. Shared because more than one group
+        /// checks a shipped scene name against it, and a name the game does not have is
+        /// the failure that no amount of parsing catches: it compiles, it validates, and
+        /// it produces a split that never fires.
+        ///
+        /// Scene names reach the trigger language exactly as the game spells them, so
+        /// the spaces and the trailing digits are the point.
+        /// </summary>
+        public static readonly string[] BuildListScenes =
+        {
+            "warnings", "menu", "initial cutscene", "lobby", "forest", "volcano",
+            "castle", "castle initial", "final cutscene 1", "final cutscene 2",
+            "credits", "post credits cutscene",
+        };
     }
 }

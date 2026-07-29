@@ -37,7 +37,8 @@ the IGT, the measured clock rate, the scene and the run count:
   wrong field or the wrong slot.
 - a scene reading **`(native)`** means the live read resolved. **`(approx)`**
   means it fell back and `scene:` splits will land at the next save rather than
-  at the door.
+  at the door — and the scenes that are never saved (the two endings, the
+  credits) stop being reachable at all.
 - **`runs = -1`** is a state, not a fault: the run counter's storage does not
   exist until the first new game of a session.
 

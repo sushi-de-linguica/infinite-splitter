@@ -32,9 +32,9 @@ The settings dialog has five tabs:
 | Debug | whether the game was found, and what the component is reading right now |
 
 Splits are conditions over the game's own state, written as expressions —
-`flag:melogBestiary`, `int:heartFragments>=4`, `scene:forest`, `credits`. The
-presets cover the usual route; [docs/splits.md](docs/splits.md) covers the rest
-of the language.
+`flag:melogBestiary`, `int:heartFragments>=4`, `scene:forest`, `ending:any`.
+The presets cover the usual route; [docs/splits.md](docs/splits.md) covers the
+rest of the language.
 
 If something does not fire, read the **Debug** tab first: it names an unknown
 flag, an unresolved read, or a scene reading `(approx)` — each of which explains

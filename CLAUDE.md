@@ -84,6 +84,7 @@ works. `./build.sh` is an alias for `make all`.
 - `runs = -1` until the first new game of a session — the counter's storage does
   not exist before then.
 - A scene reading `(approx)`: the live read did not resolve and the fallback is
-  in use. Splits will land late, visibly.
+  in use. Splits will land late, visibly — except on scenes the game never saves
+  in (the two endings and the credits), which the fallback cannot report at all.
 - The clock losing a frame per minute — that is the game's own rounding, and
   mirroring it is what keeps LiveSplit agreeing with the in-game timer.

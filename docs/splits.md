@@ -65,6 +65,7 @@ split to follow the *ability* rather than the kill.
 
 | Dropdown entry | Trigger | Fires on |
 |---|---|---|
+| Area — Enter Lobby | `scene:lobby` | the lobby becoming the active scene |
 | Area — Enter Forest | `scene:forest` | the forest becoming the active scene |
 | Area — Enter Volcano | `scene:volcano` | the volcano becoming the active scene |
 | Area — Enter Castle | `scene:castle` | the castle becoming the active scene |
@@ -94,13 +95,37 @@ Two traps in this group:
 
 ### End
 
+In route order: the kill, the ending you pick, the credits. The default route ends
+on `ending:any`.
+
 | Dropdown entry | Trigger | Fires on |
 |---|---|---|
-| End — Credits (elder's death) | `credits` | the elder's death; latched for the rest of the run |
+| End — Elder's death | `credits` | the elder's death; latched for the rest of the run |
+| End — Any ending | `ending:any` | whichever ending cutscene you chose |
+| End — Ending 1 | `ending:1` | the first ending's cutscene |
+| End — Ending 2 | `ending:2` | the second ending's cutscene |
+| End — Credits roll | `scene:credits` | the credits scene starting, after either ending |
+| End — Post-credits (100 % only) | `scene:post credits cutscene` | the scene after the credits |
 
-`credits` deliberately lands on the kill rather than on the credits panel, which
-both endings only reach several seconds later. `end` is an accepted alias, and
+The elder's death is not the end of a run: you still choose one of two endings and
+sit through its cutscene before the credits roll. `credits` latches on the kill,
+so a route ending there stops the timer early. It is kept because it is the only
+end-of-run signal that does not depend on the scene read. `end` is an alias, and
 the latch clears when a run starts.
+
+`ending:any` is exactly `scene:final cutscene 1|scene:final cutscene 2` without the
+chance of misspelling either. `ending:` takes `1`, `2` or `any` and rejects
+anything else as you type it.
+
+**Post-credits fires on almost no run.** It needs ending 2 **and** a save with
+everything finished — full map, 16 diaries, 10 heart fragments, 10 artifacts,
+every spirit. It is in the list for 100 % routes; on anything else that split
+never comes.
+
+**Where `(approx)` bites.** Every row above except `credits` reads the active
+scene. The fallback behind `(approx)` is a field written only when the game saves,
+and no ending or credits scene ever saves — so those splits do not land late, they
+do not fire at all. Use `credits` until the scene read is fixed.
 
 ### Not in the dropdown
 
@@ -119,7 +144,8 @@ defaults rather than splits. `always`, `igt:`, `collectible:`, `activation:` and
 | `activation:ID` | a world switch id — levers, doors, arenas | `activation:arenaCastle2` |
 | `count:PREFIX OP N` | how many collected ids start with PREFIX | `count:diary>=16` |
 | `scene:NAME` | the active scene | `scene:volcano` |
-| `credits` (or `end`) | latches when the run is finished | `credits` |
+| `ending:N` | which ending is playing — `1`, `2` or `any` | `ending:any` |
+| `credits` (or `end`) | latches on the elder's death | `credits` |
 | `newgame` | one tick, when a run starts | `newgame` |
 | `igt:OP TIME` | the clock being sent to LiveSplit | `igt:>=1:30:00` |
 | `always` / `never` | constants | `reset = never` |
@@ -161,7 +187,11 @@ See [splitcheck.md](splitcheck.md).
   share the first letters are counted too. When that matters, name the ids you
   mean instead.
 - **Scene names reach the trigger exactly as the game spells them**, spaces
-  included — `scene:castle initial`.
+  included — `scene:castle initial`, `scene:final cutscene 1`.
+- **The clock does not stop for the ending.** It only freezes on the main menu, so
+  a `scene:credits` split shows a time that includes the ending cutscene you sat
+  through. That is why the default route ends on `ending:any` instead; add
+  `scene:credits` after it if you want the cutscene as its own segment.
 - **`scene:` accuracy is reported in the Debug tab.** `(native)` means the
   split fires as you go through the door. `(approx)` means the component could
   not read the live scene and fell back to a value the game only refreshes when
@@ -186,7 +216,7 @@ Melog       = flag:melogBestiary
 Kairuz      = flag:kairuzBestiary
 Etrom       = flag:etromBestiary
 Elder       = flag:elderBestiary
-End         = credits
+End         = ending:any
 ```
 
 Collection milestones:

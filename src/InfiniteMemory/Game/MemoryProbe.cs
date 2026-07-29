@@ -49,10 +49,11 @@ namespace InfiniteSplitter.Game
 
             RefreshSets();
 
-            // The credits latch keys on the elder's death rather than on
-            // UIManager.CreditsPanel(), which only flips a GameObject active — that
-            // needs Unity's native object layout to see. Both endings reach the panel
-            // 5.5 s after the death, so this is the better split point regardless.
+            // `credits` latches on the elder's death, which is earlier than the credits
+            // themselves: the ending is still to be chosen and its cutscene still to
+            // play. It is kept because it is the one end-of-run signal that survives the
+            // native scene read going stale — see IProbe.Credits. `scene:credits` is the
+            // split that lands on the credits proper.
             bool elderDead = Flag("elderBestiary");
             if (elderDead && !_elderWasDead) _creditsSeen = true;
             _elderWasDead = elderDead;

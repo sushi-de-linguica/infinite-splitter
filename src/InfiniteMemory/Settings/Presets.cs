@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace InfiniteSplitter.UI
+namespace InfiniteSplitter.Settings
 {
     public sealed class Preset
     {
@@ -21,6 +21,10 @@ namespace InfiniteSplitter.UI
     /// <summary>
     /// The common splits, so the expression language is there when you outgrow the
     /// list rather than being the price of entry. Bosses are in route order.
+    ///
+    /// Lives here rather than beside the dropdown that shows it so the offline suite
+    /// can parse every trigger: a mistyped scene name still compiles and still parses,
+    /// and shows up only as a split that never fires.
     /// </summary>
     public static class Presets
     {
@@ -46,6 +50,7 @@ namespace InfiniteSplitter.UI
             new Preset("Skill", "Water Upgrade", "skill:waterUpgrade"),
             new Preset("Skill", "Ghost", "skill:Ghost"),
 
+            new Preset("Area", "Enter Lobby", "scene:lobby"),
             new Preset("Area", "Enter Forest", "scene:forest"),
             new Preset("Area", "Enter Volcano", "scene:volcano"),
             new Preset("Area", "Enter Castle", "scene:castle"),
@@ -55,7 +60,13 @@ namespace InfiniteSplitter.UI
             new Preset("Milestone", "Merchant unlocked", "flag:merchantOn"),
             new Preset("Milestone", "Teleport unlocked", "flag:teleportationOn"),
 
-            new Preset("End", "Credits (elder's death)", "credits"),
+            // Route order: the kill, the ending you pick, the credits.
+            new Preset("End", "Elder's death", "credits"),
+            new Preset("End", "Any ending", "ending:any"),
+            new Preset("End", "Ending 1", "ending:1"),
+            new Preset("End", "Ending 2", "ending:2"),
+            new Preset("End", "Credits roll", "scene:credits"),
+            new Preset("End", "Post-credits (100 % only)", "scene:post credits cutscene"),
         };
     }
 }

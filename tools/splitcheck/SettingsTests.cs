@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using InfiniteSplitter.Core;
 using InfiniteSplitter.Game;
 using InfiniteSplitter.Settings;
 using static InfiniteSplitter.Tools.Check;
@@ -25,6 +26,8 @@ namespace InfiniteSplitter.Tools
             bad += IniRoundTrip();
             bad += ImportsAConfigWithUnusedSections();
             bad += DefaultsBuildAValidCfg();
+            bad += EveryPresetParses();
+            bad += ScenePresetsNameRealScenes();
             bad += StatusSurvivesADeadAttach();
 
             Console.WriteLine(bad == 0 ? "  ok" : $"  {bad} failure(s)");
@@ -174,6 +177,54 @@ End            = credits
             bad += Expect(brokenProblems.Count == 1, "a broken trigger is reported once");
             return bad;
         }
+
+        /// <summary>
+        /// Everything the dropdown offers, and everything a fresh install starts with,
+        /// has to survive the parser. Neither list is reachable from the UI on Linux,
+        /// which is why <see cref="Presets"/> lives in the memory assembly.
+        /// </summary>
+        private static int EveryPresetParses()
+        {
+            int bad = 0;
+            foreach (var (where, text) in ShippedTriggers())
+            {
+                var errors = new List<string>();
+                var trigger = Trigger.Parse(text, errors);
+
+                if (trigger == null) { Console.WriteLine($"  ERROR {where}: '{text}' does not parse"); bad++; }
+                foreach (var error in errors) { Console.WriteLine($"  ERROR {where}: {error}"); bad++; }
+            }
+            return bad;
+        }
+
+        /// <summary>
+        /// A shipped trigger naming a scene the game does not have compiles, parses and
+        /// validates — it shows up only as a split that never fires, in someone's run.
+        /// That is the failure this pins down.
+        /// </summary>
+        private static int ScenePresetsNameRealScenes()
+        {
+            int bad = 0;
+            foreach (var (where, text) in ShippedTriggers())
+            {
+                var trigger = Trigger.Parse(text, new List<string>());
+                if (trigger == null) continue;      // already reported by EveryPresetParses
+
+                foreach (var atom in trigger.Atoms)
+                {
+                    if (atom.Kind != AtomKind.Scene) continue;
+                    if (BuildListScenes.Contains(atom.Arg, StringComparer.OrdinalIgnoreCase)) continue;
+
+                    Console.WriteLine($"  ERROR {where}: '{atom.Arg}' is not a scene the game ships");
+                    bad++;
+                }
+            }
+            return bad;
+        }
+
+        private static IEnumerable<(string Where, string Trigger)> ShippedTriggers() =>
+            Presets.All.Select(p => ("preset " + p, p.Trigger))
+                .Concat(SettingsViewModel.DefaultSplits().Select(s => ("default split " + s.Name, s.Trigger)));
 
         /// <summary>
         /// The Debug tab is what a player is told to read when a split misbehaves, so

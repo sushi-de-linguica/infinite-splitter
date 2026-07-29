@@ -28,7 +28,10 @@ namespace InfiniteSplitter.Core
         /// <summary>Name of the active scene (menu, lobby, forest, volcano, castle, ...).</summary>
         string Scene { get; }
 
-        /// <summary>Latched once the credits panel has come up.</summary>
+        /// <summary>Latched on the elder's death, not on the credits. Coarser than
+        /// `scene:credits` and earlier than it, but read from a plain managed field, so
+        /// it is the end-of-run signal that still works when <see cref="Scene"/> has
+        /// fallen back to the approximation.</summary>
         bool Credits { get; }
 
         /// <summary>One-frame pulse: the player just started a new game from the menu.</summary>
@@ -44,7 +47,7 @@ namespace InfiniteSplitter.Core
     public enum AtomKind
     {
         Flag, Number, Skill, Collectible, Activation, CountPrefix,
-        Scene, Credits, NewGame, Igt, Always, Never
+        Scene, Ending, Credits, NewGame, Igt, Always, Never
     }
 
     public enum Op { None, Ge, Gt, Le, Lt, Eq, Ne }
@@ -70,6 +73,7 @@ namespace InfiniteSplitter.Core
                 case AtomKind.Activation: v = p.Activated(Arg); break;
                 case AtomKind.CountPrefix: v = Compare(p.CountPrefix(Arg), Value); break;
                 case AtomKind.Scene: v = string.Equals(p.Scene, Arg, StringComparison.OrdinalIgnoreCase); break;
+                case AtomKind.Ending: v = MatchesEnding(p.Scene); break;
                 case AtomKind.Credits: v = p.Credits; break;
                 case AtomKind.NewGame: v = p.NewGame; break;
                 case AtomKind.Igt: v = Compare(p.Igt, Value); break;
@@ -77,6 +81,27 @@ namespace InfiniteSplitter.Core
                 default: v = false; break;
             }
             return Negate ? !v : v;
+        }
+
+        /// <summary>
+        /// The endings are ordinary scenes, so `ending:` is shorthand rather than a new
+        /// source of truth: `ending:2` is `scene:final cutscene 2`, and `ending:any` is
+        /// the OR of both without the chance of misspelling either.
+        /// </summary>
+        public static readonly string[] EndingScenes = { "final cutscene 1", "final cutscene 2" };
+
+        /// <summary><see cref="Value"/> carries the index the parser resolved, or -1 for
+        /// "whichever ending was taken". Reads <see cref="IProbe.Scene"/> once: on the
+        /// live probe that property is a memory read, not a field.</summary>
+        private bool MatchesEnding(string scene)
+        {
+            int want = (int)Value;
+            for (int i = 0; i < EndingScenes.Length; i++)
+            {
+                if (want >= 0 && want != i) continue;
+                if (string.Equals(scene, EndingScenes[i], StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
 
         private bool Compare(double left, double right)
@@ -187,12 +212,14 @@ namespace InfiniteSplitter.Core
                 case "collectible": case "item": atom.Kind = AtomKind.Collectible; break;
                 case "activation": atom.Kind = AtomKind.Activation; break;
                 case "scene": atom.Kind = AtomKind.Scene; break;
+                case "ending": atom.Kind = AtomKind.Ending; break;
                 case "int": case "num": atom.Kind = AtomKind.Number; break;
                 case "count": atom.Kind = AtomKind.CountPrefix; break;
                 case "igt": atom.Kind = AtomKind.Igt; break;
                 default:
                     errors.Add($"unknown trigger kind '{kind}' in '{atom.Source}' " +
-                               "(flag, int, count, skill, collectible, activation, scene, igt, credits, newgame)");
+                               "(flag, int, count, skill, collectible, activation, scene, ending, " +
+                               "igt, credits, newgame)");
                     return null;
             }
 
@@ -205,9 +232,32 @@ namespace InfiniteSplitter.Core
             if (atom.Kind == AtomKind.Number || atom.Kind == AtomKind.CountPrefix || atom.Kind == AtomKind.Igt)
                 return ParseComparison(atom, rest, errors);
 
+            if (atom.Kind == AtomKind.Ending)
+                return ParseEnding(atom, rest, errors);
+
             atom.Arg = rest;
             if (atom.Arg.Length == 0) { errors.Add($"'{kind}' needs an argument"); return null; }
             return atom;
+        }
+
+        /// <summary>
+        /// `ending:1`, `ending:2` or `ending:any`, resolved here to the index the atom
+        /// carries in <see cref="Atom.Value"/> — -1 meaning either ending.
+        /// Anything else is rejected here rather than at evaluation: an ending that does
+        /// not exist would otherwise be a split that quietly never fires, at the end of
+        /// a run, which is the worst place to discover a typo.
+        /// </summary>
+        private static Atom ParseEnding(Atom atom, string rest, List<string> errors)
+        {
+            switch (rest.ToLowerInvariant())
+            {
+                case "any": atom.Value = -1; return atom;
+                case "1": atom.Value = 0; return atom;
+                case "2": atom.Value = 1; return atom;
+                default:
+                    errors.Add($"'{atom.Source}' — 'ending' takes 1, 2 or any");
+                    return null;
+            }
         }
 
         private static Atom NoArg(Atom atom, string rest, List<string> errors)

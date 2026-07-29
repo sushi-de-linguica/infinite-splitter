@@ -112,8 +112,8 @@ component's `Update`.
 A split condition is an expression over named game state, parsed by
 `Core/Trigger.cs`: OR of ANDs, no parentheses, with atoms like `flag:sword`,
 `int:heartFragments>=4`, `skill:Dash`, `collectible:<id>`, `scene:forest`,
-`credits`, `newgame`. `Timeline` walks the split list in order and performs at
-most one action per tick. See [splits.md](splits.md).
+`ending:any`, `credits`, `newgame`. `Timeline` walks the split list in order and
+performs at most one action per tick. See [splits.md](splits.md).
 
 `IProbe` is the whole interface between the language and the game, which keeps
 the grammar and its tests independent of how any single value is read.

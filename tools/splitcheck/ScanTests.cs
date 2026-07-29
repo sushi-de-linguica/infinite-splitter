@@ -196,8 +196,11 @@ namespace InfiniteSplitter.Tools
         }
 
         /// <summary>
-        /// The scenes as the game names them. "castle initial" has a space, so the name
-        /// check cannot be a plain identifier test — that is the case worth pinning.
+        /// The scenes as the game names them. "castle initial" has a space and the two
+        /// ending cutscenes end in a digit, so the name check cannot be a plain
+        /// identifier test — that is the case worth pinning. The endings and the credits
+        /// are what the End split reads, and they are never saved, so nothing else can
+        /// answer for them.
         /// </summary>
         private static int SceneNamesComeOutOfAssetPaths()
         {
@@ -209,6 +212,10 @@ namespace InfiniteSplitter.Tools
                 ("Assets/Scenes/castle initial.unity", "castle initial"),
                 ("Assets/Scenes/lobby.unity", "lobby"),
                 ("Assets/Scenes/menu.unity", "menu"),
+                ("Assets/Scenes/final cutscene 1.unity", "final cutscene 1"),
+                ("Assets/Scenes/final cutscene 2.unity", "final cutscene 2"),
+                ("Assets/Scenes/credits.unity", "credits"),
+                ("Assets/Scenes/post credits cutscene.unity", "post credits cutscene"),
             };
 
             foreach (var (path, expected) in cases)

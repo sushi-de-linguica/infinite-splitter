@@ -245,7 +245,7 @@ Melog        = flag:melogBestiary
 Kairuz       = flag:kairuzBestiary
 Etrom        = flag:etromBestiary
 Elder        = flag:elderBestiary
-End          = credits
+End          = ending:any
 ";
     }
 }
