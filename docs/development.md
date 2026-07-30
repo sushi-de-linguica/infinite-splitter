@@ -50,12 +50,45 @@ they come from LiveSplit itself.
 | `tools/package.py` | builds the release zip from `Components/` |
 | `tools/publish.sh` | the release flow: verify, build, tag, push, draft release |
 | `tools/dist-readme.txt` | source of `Components/readme.txt`; the Makefile converts it to CRLF |
-| `packages/` | `LiveSplit.Core.dll`, `UpdateManager.dll` — compile-time only |
+| `packages/` | `LiveSplit.Core.dll`, `UpdateManager.dll` — compile-time only. `SHA256SUMS` pins their bytes; `PROVENANCE.md` records where they came from |
 | `Components/` | build output; the single DLL a user drops into LiveSplit, committed so the updater can fetch it |
 | `docs/` | this folder |
 
 [architecture.md](architecture.md) explains why the split between the three
 projects is load-bearing rather than tidiness.
+
+## Continuous integration
+
+CI covers **security only** — it does not build the component and does not run
+the offline suite. `make all` before pushing is still the gate that says the
+change compiles; nothing on GitHub will say it for you.
+
+| Workflow | What it does |
+|---|---|
+| `codeql.yml` | Static analysis of our C#. `build-mode: none`, so it never compiles — the trade is that types from the vendored assemblies go unresolved and `src/InfiniteSplitter/` is analysed more shallowly than `src/InfiniteMemory/` |
+| `supply-chain.yml` | Verifies `packages/SHA256SUMS`, refuses an unpinned DLL beside the pinned ones, restores in locked mode, fails on a vulnerable NuGet package, and scans for leaked secrets |
+| `scorecard.yml` | Grades the repository's own posture and publishes to the Security tab |
+| `dependabot.yml` | Weekly NuGet and GitHub-Actions updates. Runs on GitHub's infrastructure, so it costs no Actions minutes |
+
+Every third-party action is pinned to a **full commit SHA**, with the tag beside
+it in a comment. Dependabot is what moves those pins — replacing one with a
+floating tag silently opts out of the whole arrangement.
+
+Two dependency pins are load-bearing and are checked on every pull request:
+
+- `src/InfiniteSplitter/packages.lock.json` — committed, and restored with
+  `--locked-mode`. After changing a `PackageReference`, regenerate it with
+  `dotnet restore src/InfiniteSplitter --force-evaluate` and commit the result,
+  or CI will reject the build.
+- `packages/SHA256SUMS` — regenerate only when a vendored DLL is updated on
+  purpose. The command and the reasoning are in
+  [`packages/PROVENANCE.md`](../packages/PROVENANCE.md).
+
+What CI does **not** cover: nothing proves that the committed
+`Components/InfiniteSplitter.dll` — the file LiveSplit's updater hands to users —
+was built from the source in this tree. That check needs a build, and would have
+to compare hashes rather than run `git status`, because `make components`
+rewrites the tracked file by design.
 
 ## Comments
 

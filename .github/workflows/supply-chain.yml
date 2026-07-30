@@ -1,0 +1,114 @@
+name: Supply chain
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+  schedule:
+    - cron: "30 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vendored-binaries:
+    name: Vendored binary integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify packages/SHA256SUMS
+        working-directory: packages
+        run: sha256sum -c SHA256SUMS
+
+      - name: Fail if a DLL is present but unlisted
+        working-directory: packages
+        run: |
+          set -euo pipefail
+          # A new unpinned binary must not slip in beside the pinned ones.
+          count=0
+          for path in ./*.dll; do
+            # An unmatched glob stays literal; the vendored DLLs disappearing is
+            # itself a failure, not a reason to pass with nothing to check.
+            [ -e "$path" ] || { echo "::error::no DLLs found in packages/"; exit 1; }
+            dll=${path#./}
+            if ! grep -qF "  $dll" SHA256SUMS; then
+              echo "::error file=packages/$dll::not listed in packages/SHA256SUMS"
+              echo "Add it, or see packages/PROVENANCE.md for how to regenerate."
+              exit 1
+            fi
+            count=$((count + 1))
+          done
+          echo "all $count vendored DLLs are pinned"
+
+  dependencies:
+    name: Vulnerable NuGet packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore in locked mode
+        run: dotnet restore InfiniteSplitter.sln --locked-mode
+
+      - name: Audit
+        run: |
+          set -euo pipefail
+          # `dotnet list package --vulnerable` reports findings but still exits 0,
+          # so the exit code cannot be trusted — the output has to be inspected.
+          dotnet list InfiniteSplitter.sln package --vulnerable --include-transitive \
+            | tee audit.log
+          if grep -q "has the following vulnerable packages" audit.log; then
+            echo "::error::vulnerable NuGet packages found — see the log above"
+            exit 1
+          fi
+          echo "no known vulnerable packages"
+
+      - name: Report deprecated packages
+        continue-on-error: true
+        run: dotnet list InfiniteSplitter.sln package --deprecated --include-transitive
+
+  secrets:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan pull request diff
+        if: github.event_name == 'pull_request'
+        uses: trufflesecurity/trufflehog@6f3c981e7b77f235fd2702dd74af25fc4b72bf11 # v3.96.0
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+          extra_args: --results=verified
+
+      - name: Scan full history
+        if: github.event_name != 'pull_request'
+        uses: trufflesecurity/trufflehog@6f3c981e7b77f235fd2702dd74af25fc4b72bf11 # v3.96.0
+        with:
+          extra_args: --results=verified

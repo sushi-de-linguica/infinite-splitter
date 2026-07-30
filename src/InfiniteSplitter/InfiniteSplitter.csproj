@@ -28,6 +28,7 @@
     <Version>1.0.0</Version>
     <!-- CS0436: the vendored LiveSplit assemblies overlap type names with ours -->
     <NoWarn>$(NoWarn);CS0436</NoWarn>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>

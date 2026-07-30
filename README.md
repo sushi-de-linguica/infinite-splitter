@@ -85,3 +85,11 @@ exceptions, and a process hook with `Hooked`/`Exited` — follows
 code here is our own; the design lessons are theirs.
 
 And Thanks for [Nyk_Style](https://www.speedrun.com/users/Nyk_Style) for testing!
+
+`packages/` holds two assemblies from [LiveSplit](https://github.com/LiveSplit/LiveSplit)
+(MIT), unmodified and compile-time only. [packages/PROVENANCE.md](packages/PROVENANCE.md)
+records which release they came from.
+
+## License
+
+GPL-3.0-or-later. See [LICENSE](LICENSE).
