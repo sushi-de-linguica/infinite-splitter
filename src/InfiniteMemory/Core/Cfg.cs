@@ -33,9 +33,6 @@ namespace InfiniteSplitter.Core
 
         // [timer]
         public bool SendIgt = true;
-        public string Slot = "auto";            // auto | 1..5
-        public bool PauseOnLoad;                // freeze IGT while the game is loading
-        public bool PauseOnPauseMenu;           // freeze IGT while the pause menu is open
         public bool ZeroAtStart;                // subtract the IGT captured when the run starts
         public bool SwitchToGameTime = true;    // make LiveSplit's main timer show game time
 
@@ -136,9 +133,6 @@ namespace InfiniteSplitter.Core
                 case "server.reconnect_seconds": ReconnectSeconds = Num(value, ReconnectSeconds, lineNo, "server.reconnect_seconds"); return;
 
                 case "timer.igt": SendIgt = Bool(value, SendIgt, lineNo, "timer.igt"); return;
-                case "timer.slot": Slot = ValidSlot(value, lineNo); return;
-                case "timer.pause_on_load": PauseOnLoad = Bool(value, PauseOnLoad, lineNo, "timer.pause_on_load"); return;
-                case "timer.pause_on_pause_menu": PauseOnPauseMenu = Bool(value, PauseOnPauseMenu, lineNo, "timer.pause_on_pause_menu"); return;
                 case "timer.zero_at_start": ZeroAtStart = Bool(value, ZeroAtStart, lineNo, "timer.zero_at_start"); return;
                 case "timer.switch_to_gametime": SwitchToGameTime = Bool(value, SwitchToGameTime, lineNo, "timer.switch_to_gametime"); return;
 
@@ -155,6 +149,17 @@ namespace InfiniteSplitter.Core
                 case "hotkeys.split": KeySplit = value; return;
                 case "hotkeys.undo": KeyUndo = value; return;
                 case "hotkeys.reset": KeyReset = value; return;
+
+                // Retired. Named rather than left to fall through to "unknown setting",
+                // so an older config is told what happened to them: the clock is a
+                // straight mirror of the game's now, which leaves no slot to choose and
+                // nothing to carve out.
+                case "timer.slot":
+                case "timer.pause_on_load":
+                case "timer.pause_on_pause_menu":
+                    Warnings.Add($"line {lineNo}: '[timer] {key}' no longer exists — the clock always mirrors " +
+                                 "the game's, following the slot in play; ignored");
+                    return;
             }
 
             if (section.Length == 0) Errors.Add($"line {lineNo}: '{key}' appears before any [section]");
@@ -167,16 +172,6 @@ namespace InfiniteSplitter.Core
             var result = Trigger.Parse(value, errors);
             foreach (var e in errors) Errors.Add($"line {lineNo}: {what}: {e}");
             return errors.Count == 0 ? result : null;
-        }
-
-        private string ValidSlot(string value, int lineNo)
-        {
-            string v = value.Trim().ToLowerInvariant();
-            if (v == "auto") return v;
-            if (int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) && n >= 1 && n <= 5)
-                return v;
-            Errors.Add($"line {lineNo}: timer.slot must be 'auto' or 1..5, got '{value}'");
-            return "auto";
         }
 
         private bool Bool(string value, bool fallback, int lineNo, string what)
@@ -229,7 +224,6 @@ port = 16834
 
 [timer]
 igt = on
-slot = auto
 
 [run]
 start = newgame

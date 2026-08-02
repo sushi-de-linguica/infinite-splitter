@@ -25,9 +25,6 @@ namespace InfiniteSplitter.UI
             return layout;
         }
 
-        private Control Labelled(string text, Control control) =>
-            Flow(new Label { AutoSize = true, Text = text, Padding = new Padding(0, 4, 0, 0) }, control);
-
         private FlowLayoutPanel Flow(params Control[] controls)
         {
             var flow = new FlowLayoutPanel

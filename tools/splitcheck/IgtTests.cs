@@ -26,7 +26,7 @@ namespace InfiniteSplitter.Tools
 
             bad += MonotonicAdvance();
             bad += SaveLoadJumpsBackwards();
-            bad += PauseOnLoadExcludesTime();
+            bad += NothingIsCarvedOut();
             bad += ZeroAtStartRebases();
             bad += SlotResolution();
 
@@ -53,58 +53,49 @@ namespace InfiniteSplitter.Tools
         }
 
         /// <summary>
-        /// Loading a save rewinds the game's counter. The clock must follow it, and the
-        /// backwards delta must not reach the pause accumulator — that would corrupt
-        /// every later reading.
+        /// Loading a save rewinds the game's counter, and the clock follows it down
+        /// rather than holding a high-water mark — which is what lets a run survive a
+        /// save / quit to menu / load cycle showing the right time.
         /// </summary>
         private static int SaveLoadJumpsBackwards()
         {
             var f = Fixture();
-            f.Igt.PauseOnLoad = true;
-
             f.SetClock(1, 0, 5, 0f);
             f.Igt.Update(f.Snapshot, f.Fields);
+            int bad = Near(f.Igt.Value, 300, "before loading");
 
             f.SetClock(1, 0, 2, 0f);            // an older save
-            f.SetBool(LoadingOffset, true);     // and we are loading while it happens
             f.Igt.Update(f.Snapshot, f.Fields);
-            int bad = Near(f.Igt.Value, 120, "after loading an older save");
+            bad += Near(f.Igt.Value, 120, "after loading an older save");
 
-            f.SetBool(LoadingOffset, false);
             f.SetClock(1, 0, 2, 10f);
             f.Igt.Update(f.Snapshot, f.Fields);
-            bad += Near(f.Igt.Value, 130, "the backwards jump must not have been excluded");
+            bad += Near(f.Igt.Value, 130, "and counts on from where the save left off");
             return bad;
         }
 
-        private static int PauseOnLoadExcludesTime()
+        /// <summary>
+        /// The clock is a mirror, so time the game counts is time we report — loading
+        /// screens and the pause menu included. Anything carved out here is a number
+        /// the player cannot check against the one the game shows them.
+        /// </summary>
+        private static int NothingIsCarvedOut()
         {
             var f = Fixture();
-            f.Igt.PauseOnLoad = true;
-
             f.SetClock(1, 0, 1, 0f);
             f.Igt.Update(f.Snapshot, f.Fields);
 
-            // Ten seconds pass while a loading screen is up.
+            // Ten seconds pass under a loading screen, five more with the pause menu up.
             f.SetBool(LoadingOffset, true);
             f.SetClock(1, 0, 1, 10f);
             f.Igt.Update(f.Snapshot, f.Fields);
-            int bad = Near(f.Igt.Value, 60, "loading time must be carved out");
+            int bad = Near(f.Igt.Value, 70, "loading time counts");
 
-            // Five more seconds, playing.
             f.SetBool(LoadingOffset, false);
+            f.SetUiBool(UiPausedOffset, true);
             f.SetClock(1, 0, 1, 15f);
             f.Igt.Update(f.Snapshot, f.Fields);
-            bad += Near(f.Igt.Value, 65, "play time after a load resumes");
-
-            // And with the option off the same sequence keeps everything.
-            var g = Fixture();
-            g.SetClock(1, 0, 1, 0f);
-            g.Igt.Update(g.Snapshot, g.Fields);
-            g.SetBool(LoadingOffset, true);
-            g.SetClock(1, 0, 1, 10f);
-            g.Igt.Update(g.Snapshot, g.Fields);
-            bad += Near(g.Igt.Value, 70, "with pause_on_load off, loading counts");
+            bad += Near(f.Igt.Value, 75, "pause-menu time counts");
             return bad;
         }
 
@@ -147,15 +138,7 @@ namespace InfiniteSplitter.Tools
             f.SetBool(CanSaveBase + 2, false);          // the menu clears them all
             f.Igt.Update(f.Snapshot, f.Fields);
             bad += Expect(f.Igt.ActiveSlot == 3, "kept the last slot, got " + f.Igt.ActiveSlot);
-
-            var g = Fixture();
-            g.Igt.SlotSetting = "1";
-            g.SetClock(1, 1, 0, 0f);
-            g.SetClock(3, 9, 0, 0f);
-            g.SetBool(CanSaveBase + 2, true);
-            g.Igt.Update(g.Snapshot, g.Fields);
-            bad += Expect(g.Igt.ActiveSlot == 1, "forced slot, got " + g.Igt.ActiveSlot);
-            bad += Near(g.Igt.Value, 3600, "forced slot's clock");
+            bad += Near(f.Igt.Value, 32400, "and kept reading its clock");
             return bad;
         }
 
@@ -176,6 +159,8 @@ namespace InfiniteSplitter.Tools
             }
 
             public void SetBool(int offset, bool value) => GameManager[offset] = (byte)(value ? 1 : 0);
+
+            public void SetUiBool(int offset, bool value) => UIManager[offset] = (byte)(value ? 1 : 0);
         }
 
         private static Harness Fixture()

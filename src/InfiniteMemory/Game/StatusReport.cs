@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 
 namespace InfiniteSplitter.Game
@@ -17,12 +18,16 @@ namespace InfiniteSplitter.Game
         /// Never throws and never returns null: a caller in the middle of a failed
         /// attach still gets a line it can display. Lines are separated by '\n'; a
         /// WinForms caller has to widen those to "\r\n" itself.
+        ///
+        /// <paramref name="log"/> is the caller's recent notes and faults, newest last.
+        /// It is printed even with nothing attached, because a fault during the attach
+        /// is exactly what the reader is looking for at that point.
         /// </summary>
-        public static string Describe(Infinitevania game, MemoryProbe probe)
+        public static string Describe(Infinitevania game, MemoryProbe probe, IEnumerable<string> log = null)
         {
             var sb = new StringBuilder();
             if (game == null || !game.IsHooked || game.Runtime == null)
-                return "not attached to Infinitevania\n";
+                return "not attached to Infinitevania\n" + Log(log);
 
             var runtime = game.Runtime;
             sb.AppendLine($"pid                {game.ProcessId}");
@@ -76,6 +81,20 @@ namespace InfiniteSplitter.Game
                 }
             }
 
+            sb.Append(Log(log));
+            return sb.ToString();
+        }
+
+        private static string Log(IEnumerable<string> log)
+        {
+            if (log == null) return "";
+
+            var sb = new StringBuilder();
+            foreach (var line in log)
+            {
+                if (sb.Length == 0) { sb.AppendLine(); sb.AppendLine("log:"); }
+                sb.AppendLine("  " + line);
+            }
             return sb.ToString();
         }
     }

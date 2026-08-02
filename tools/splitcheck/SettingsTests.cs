@@ -25,6 +25,7 @@ namespace InfiniteSplitter.Tools
             bad += UnversionedDocumentIsMigrated();
             bad += IniRoundTrip();
             bad += ImportsAConfigWithUnusedSections();
+            bad += RetiredFieldsInAStoredLayoutAreIgnored();
             bad += DefaultsBuildAValidCfg();
             bad += EveryPresetParses();
             bad += ScenePresetsNameRealScenes();
@@ -40,8 +41,6 @@ namespace InfiniteSplitter.Tools
             var model = new SettingsViewModel
             {
                 SendIgt = false,
-                Slot = "3",
-                PauseOnLoad = true,
                 ZeroAtStart = true,
                 Start = "flag:sword",
                 Reset = "scene:menu",
@@ -57,8 +56,6 @@ namespace InfiniteSplitter.Tools
 
             int bad = 0;
             bad += Expect(restored.SendIgt == false, "SendIgt");
-            bad += Expect(restored.Slot == "3", "Slot");
-            bad += Expect(restored.PauseOnLoad, "PauseOnLoad");
             bad += Expect(restored.ZeroAtStart, "ZeroAtStart");
             bad += Expect(restored.AutoReset == false, "AutoReset");
             bad += Expect(restored.Start == "flag:sword", "Start");
@@ -97,15 +94,15 @@ namespace InfiniteSplitter.Tools
         private static int IniRoundTrip()
         {
             var model = SettingsViewModel.CreateDefault();
-            model.Slot = "2"; model.PauseOnPauseMenu = true; model.Reset = "scene:menu";
+            model.ZeroAtStart = true; model.SendIgt = false; model.Reset = "scene:menu";
             var restored = CfgBridge.FromIni(CfgBridge.ToIni(model), out var problems);
 
             int bad = 0;
             foreach (var problem in problems)
                 if (!problem.StartsWith("warning:")) { Console.WriteLine("  ERROR ini: " + problem); bad++; }
 
-            bad += Expect(restored.Slot == "2", "Slot survived the INI round trip");
-            bad += Expect(restored.PauseOnPauseMenu, "PauseOnPauseMenu survived");
+            bad += Expect(restored.ZeroAtStart, "ZeroAtStart survived the INI round trip");
+            bad += Expect(restored.SendIgt == false, "SendIgt survived");
             bad += Expect(restored.Reset == "scene:menu", "Reset survived");
             bad += Expect(restored.Splits.Count == model.Splits.Count,
                 $"split count {restored.Splits.Count} vs {model.Splits.Count}");
@@ -116,8 +113,9 @@ namespace InfiniteSplitter.Tools
             return bad;
         }
 
-        /// <summary>A .cfg carrying sections this component does not use must still
-        /// import cleanly, with those sections ignored rather than rejected.</summary>
+        /// <summary>A .cfg carrying sections this component does not use — and settings it
+        /// no longer has — must still import cleanly, with those ignored rather than
+        /// rejected. Someone's saved config predates every removal.</summary>
         private static int ImportsAConfigWithUnusedSections()
         {
             const string foreignConfig = @"
@@ -153,10 +151,33 @@ End            = credits
             foreach (var problem in problems)
                 if (!problem.StartsWith("warning:")) { Console.WriteLine("  ERROR importing: " + problem); bad++; }
 
-            bad += Expect(model.PauseOnLoad, "pause_on_load came across");
+            bad += Expect(problems.Exists(p => p.Contains("pause_on_load")),
+                "the retired pause_on_load is reported rather than silently dropped");
+            bad += Expect(problems.Exists(p => p.Contains("slot")),
+                "the retired slot is reported rather than silently dropped");
             bad += Expect(model.Reset == "never", "reset came across");
             bad += Expect(model.Splits.Count == 3, "split count " + model.Splits.Count);
             bad += Expect(model.Splits[1].Name == "Tenroh", "split names came across");
+            return bad;
+        }
+
+        /// <summary>
+        /// The other half of the same promise: a layout LiveSplit stored before those
+        /// settings were removed still deserializes, splits and all. XmlSerializer
+        /// ignores elements the type no longer has, and this is what pins that down.
+        /// </summary>
+        private static int RetiredFieldsInAStoredLayoutAreIgnored()
+        {
+            const string stored = "<InfiniteSplitter version=\"1\">" +
+                                  "<SendIgt>true</SendIgt><Slot>3</Slot>" +
+                                  "<PauseOnLoad>true</PauseOnLoad><PauseOnPauseMenu>true</PauseOnPauseMenu>" +
+                                  "<ZeroAtStart>true</ZeroAtStart>" +
+                                  "<Splits><Split name=\"Sword\" trigger=\"flag:sword\" /></Splits>" +
+                                  "</InfiniteSplitter>";
+
+            var model = SettingsViewModel.Deserialize(stored);
+            int bad = Expect(model.Splits.Count == 1, "the splits survived: " + model.Splits.Count);
+            bad += Expect(model.ZeroAtStart, "a setting after the removed ones still came across");
             return bad;
         }
 

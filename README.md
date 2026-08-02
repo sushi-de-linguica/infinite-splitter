@@ -27,7 +27,7 @@ The settings dialog has five tabs:
 
 | Tab | |
 |---|---|
-| Timer | which save slot to follow, and what to exclude from the clock |
+| Timer | whether to drive Game Time from the game's clock, and where it starts |
 | Run | when a run starts, splits and resets |
 | Splits | the split list, with presets for the common conditions |
 | Advanced | the whole configuration as editable text |

@@ -26,6 +26,27 @@ namespace InfiniteSplitter
         /// LiveSplit left open all day scans the process list 60 times a second.</summary>
         private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
 
+        /// <summary>
+        /// How many ticks in a row have to fault before <see cref="RetryDelay"/> is
+        /// applied to a fault raised *inside* the tick rather than by the attach.
+        ///
+        /// Backing off on the first one costs five seconds of not reading the clock and
+        /// not testing a single split condition — worse than the glitch it hides, and
+        /// invisible, since the run carries on. Only a tick that is broken every frame
+        /// is worth throttling, and by then it is a standing fault, not a glitch.
+        /// </summary>
+        private const int FaultsBeforeBackOff = 30;
+
+        /// <summary>
+        /// Timeline notes and tick faults, newest last — the component's only log, shown
+        /// in the Debug tab. Every note used to be written to a field nothing read, so a
+        /// split, a reset or a five-second hole in the clock left no trace at all.
+        /// </summary>
+        private readonly List<string> _log = new List<string>();
+        private const int LogLines = 12;
+
+        private int _consecutiveFaults;
+
         private readonly LiveSplitState _state;
         private readonly TimerModel _timerModel;
         private readonly TimerModelLink _link;
@@ -39,7 +60,6 @@ namespace InfiniteSplitter
         private Timeline _timeline;
         private bool _rebuildPending;
         private DateTime _lastFailedRefresh = DateTime.MinValue;
-        private string _lastStatus = "starting";
 
         public InfiniteSplitterComponent(LiveSplitState state)
         {
@@ -102,10 +122,16 @@ namespace InfiniteSplitter
                     _probe.OnRunStarted();
                 }
 
+                // Written on every tick even once the run is over, because that is what
+                // holds the claim on Game Time: stop writing and LiveSplit free-runs it
+                // on real time between our writes. What a finished run changes is the
+                // value, not the cadence — it holds the clock at its last split instead
+                // of following the game's, which keeps counting through the ending.
                 if (_cfg.SendIgt && _timeline.Phase != Phase.Idle)
-                    _link.SetGameTime(_igt.Value);
+                    _link.SetGameTime(_timeline.Phase == Phase.Ended ? _timeline.FinalIgt : _igt.Value);
 
                 _probe.ClearPulses();
+                _consecutiveFaults = 0;
                 SetStatus($"{_igt.Format()}  slot {_igt.ActiveSlot}  {_timeline.Phase.ToString().ToLowerInvariant()}" +
                           (_timeline.Phase == Phase.Running
                               ? $"  split {_timeline.Index + 1}/{_timeline.Count} -> {_timeline.Pending}"
@@ -115,9 +141,19 @@ namespace InfiniteSplitter
             {
                 // Nothing may escape into LiveSplit's render loop: an exception here
                 // takes down the whole timer, not just this component.
-                SetStatus("error: " + e.Message);
-                _lastFailedRefresh = DateTime.Now;
+                RecordFault(e);
             }
+        }
+
+        private void RecordFault(Exception e)
+        {
+            _consecutiveFaults++;
+
+            string what = e.GetType().Name + ": " + e.Message;
+            Note("fault: " + what);
+
+            if (_consecutiveFaults >= FaultsBeforeBackOff) _lastFailedRefresh = DateTime.Now;
+            SetStatus($"error (x{_consecutiveFaults}): {what}");
         }
 
         /// <summary>
@@ -163,13 +199,17 @@ namespace InfiniteSplitter
             _timeline.DoReset("reset by hand in LiveSplit");
         }
 
-        private void Note(string message) => _lastStatus = message;
-
-        private void SetStatus(string message)
+        /// <summary>Appends to the Debug tab's log. Consecutive repeats collapse: a fault
+        /// raised on every tick would otherwise flush the whole ring in a fifth of a
+        /// second and hide what led up to it.</summary>
+        private void Note(string message)
         {
-            _lastStatus = message;
-            _settingsControl?.SetStatus(message, _game, _probe);
+            if (_log.Count > 0 && _log[_log.Count - 1] == message) return;
+            if (_log.Count >= LogLines) _log.RemoveAt(0);
+            _log.Add(message);
         }
+
+        private void SetStatus(string message) => _settingsControl?.SetStatus(message, _game, _probe, _log);
 
         public Control GetSettingsControl(LayoutMode mode) => _settingsControl;
 

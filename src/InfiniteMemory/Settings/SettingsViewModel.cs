@@ -41,9 +41,6 @@ namespace InfiniteSplitter.Settings
 
         // [timer]
         public bool SendIgt = true;
-        public string Slot = "auto";
-        public bool PauseOnLoad;
-        public bool PauseOnPauseMenu;
         public bool ZeroAtStart;
         public bool SwitchToGameTime = true;
 

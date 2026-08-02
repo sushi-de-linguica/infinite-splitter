@@ -8,68 +8,37 @@ namespace InfiniteSplitter.Game
     /// re-integrated from our own delta, which is what keeps LiveSplit and the
     /// in-game timer showing the same number down to the rounding.
     ///
-    /// The raw counter keeps running through the pause menu, loading screens and
-    /// cutscenes, so anything the player wants excluded is carved out here.
+    /// Mirroring is the whole contract — nothing is carved out of the total, so a
+    /// backwards jump (a save loaded, a new game zeroing the counters) is simply
+    /// followed. The one adjustment is <see cref="Rebase"/>'s baseline.
     /// </summary>
     public sealed class IgtSource
     {
-        private double _lastRaw;
-        private double _excluded;
         private double _baseline;
-        private bool _primed;
-
-        /// <summary>"auto" or "1".."5".</summary>
-        public string SlotSetting = "auto";
-
-        public bool PauseOnLoad;
-        public bool PauseOnPauseMenu;
 
         /// <summary>Which slot the last read came from; 0 before the game is up.</summary>
         public int ActiveSlot { get; private set; }
 
-        /// <summary>The game's counter, before any exclusions.</summary>
+        /// <summary>The game's counter, as read.</summary>
         public double Raw { get; private set; }
 
-        /// <summary>What LiveSplit gets.</summary>
+        /// <summary>What LiveSplit gets: <see cref="Raw"/> less the baseline.</summary>
         public double Value { get; private set; }
-
-        /// <summary>True while the current tick is being carved out of the total.</summary>
-        public bool Paused { get; private set; }
 
         public void Rebase(bool zeroAtStart, GameSnapshot snapshot, GameFields fields)
         {
             Raw = ReadRaw(snapshot, fields);
-            _lastRaw = Raw;
-            _excluded = 0;
             _baseline = zeroAtStart ? Raw : 0;
-            _primed = true;
             Value = Math.Max(0, Raw - _baseline);
         }
 
         public void Update(GameSnapshot snapshot, GameFields fields)
         {
-            double raw = ReadRaw(snapshot, fields);
-            if (!_primed) { Rebase(false, snapshot, fields); return; }
+            Raw = ReadRaw(snapshot, fields);
 
-            double delta = raw - _lastRaw;
-            _lastRaw = raw;
-
-            Paused = IsPaused(snapshot, fields);
-
-            // A backwards jump means a save was loaded or a new game zeroed the
-            // counters; it must never feed the exclusion accumulator.
-            if (delta > 0 && Paused) _excluded += delta;
-
-            Raw = raw;
-            Value = Math.Max(0, raw - _excluded - _baseline);
-        }
-
-        private bool IsPaused(GameSnapshot snapshot, GameFields fields)
-        {
-            if (PauseOnLoad && fields.Loading != null && snapshot.Bool(fields.Loading)) return true;
-            if (PauseOnPauseMenu && fields.UiPaused != null && snapshot.UIManagerAlive &&
-                snapshot.BoolUI(fields.UiPaused)) return true;
-            return false;
+            // Clamped because a save loaded after the baseline was taken rewinds the
+            // counter below it; the run's own clock cannot go negative.
+            Value = Math.Max(0, Raw - _baseline);
         }
 
         private double ReadRaw(GameSnapshot snapshot, GameFields fields)
@@ -98,9 +67,6 @@ namespace InfiniteSplitter.Game
         /// </summary>
         private int ResolveSlot(GameSnapshot snapshot, GameFields fields)
         {
-            if (SlotSetting != "auto" && int.TryParse(SlotSetting, out int forced) && forced >= 1 && forced <= 5)
-                return forced;
-
             for (int slot = 1; slot <= 5; slot++)
                 if (fields.CanSave[slot] != null && snapshot.Bool(fields.CanSave[slot]))
                     return slot;

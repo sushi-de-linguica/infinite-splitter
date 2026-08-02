@@ -33,6 +33,7 @@ namespace InfiniteSplitter.Tools
             failures += IgtTests.Run();
             failures += NewGameTests.Run();
             failures += TriggerTests.Run();
+            failures += TimelineTests.Run();
             failures += SettingsTests.Run();
             failures += ScanTests.Run();
 

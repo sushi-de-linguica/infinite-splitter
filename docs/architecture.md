@@ -41,7 +41,7 @@ reads the wrong field is worse than one that refuses to start.
 ```
 TryRefresh          attach if needed; cheap liveness check if already attached
 TakeSnapshot        two bulk reads of the objects we watch, plus the run count
-IgtSource.Update    the game's five slot clocks -> one number
+IgtSource.Update    the game's five slot clocks -> one number, mirrored as-is
 NewGameDetector     run count and fresh-clock signals -> a one-tick pulse
 MemoryProbe.Bind    point the trigger language at this tick's snapshot
 Timeline.Tick       new game > reset > start > split, at most one action
@@ -98,9 +98,13 @@ Time falls back to real time minus `LoadingTimes` and free-runs between our
 writes, each write yanking it back.
 
 While playing, our clock also advances at about 1×, so the drift inside one frame
-is invisible. The moment the clock is deliberately held — the pause menu with
-"exclude pause time" on, or a loading screen — ours freezes while LiveSplit's
-creeps forward, and the display flickers between the two.
+is invisible. The moment the clock is deliberately held — a finished run, which
+sits on the time of its last split — ours freezes while LiveSplit's creeps
+forward, and the display flickers between the two.
+
+That is also why a finished run keeps writing rather than stopping: the value it
+writes stops changing, the writing does not. Stop writing and Game Time resumes on
+real time, which is the failure this flag exists to prevent.
 
 So `TimerModelLink.SetGameTime` re-asserts the flag on every write. That method is
 the single funnel for both the per-tick push and the writes `Timeline` makes

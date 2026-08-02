@@ -34,9 +34,6 @@ namespace InfiniteSplitter.UI
 
         // timer
         private readonly CheckBox _sendIgt = new CheckBox { AutoSize = true, Text = "Feed LiveSplit's Game Time from the game's clock" };
-        private readonly ComboBox _slot = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 90 };
-        private readonly CheckBox _pauseOnLoad = new CheckBox { AutoSize = true, Text = "Exclude loading screens" };
-        private readonly CheckBox _pauseOnPauseMenu = new CheckBox { AutoSize = true, Text = "Exclude time with the pause menu open" };
         private readonly CheckBox _zeroAtStart = new CheckBox { AutoSize = true, Text = "Start the clock from zero, whatever the save held" };
         private readonly CheckBox _switchToGameTime = new CheckBox { AutoSize = true, Text = "Switch LiveSplit's timer to Game Time on attach" };
 
@@ -125,10 +122,6 @@ namespace InfiniteSplitter.UI
             try
             {
                 _sendIgt.Checked = _model.SendIgt;
-                _slot.SelectedItem = _model.Slot;
-                if (_slot.SelectedIndex < 0) _slot.SelectedIndex = 0;
-                _pauseOnLoad.Checked = _model.PauseOnLoad;
-                _pauseOnPauseMenu.Checked = _model.PauseOnPauseMenu;
                 _zeroAtStart.Checked = _model.ZeroAtStart;
                 _switchToGameTime.Checked = _model.SwitchToGameTime;
 
@@ -151,9 +144,6 @@ namespace InfiniteSplitter.UI
             if (_loading) return;
 
             _model.SendIgt = _sendIgt.Checked;
-            _model.Slot = _slot.SelectedItem as string ?? "auto";
-            _model.PauseOnLoad = _pauseOnLoad.Checked;
-            _model.PauseOnPauseMenu = _pauseOnPauseMenu.Checked;
             _model.ZeroAtStart = _zeroAtStart.Checked;
             _model.SwitchToGameTime = _switchToGameTime.Checked;
 
@@ -184,13 +174,37 @@ namespace InfiniteSplitter.UI
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>Called from LiveSplit's Update, so already on the UI thread.</summary>
-        public void SetStatus(string status, Infinitevania game, MemoryProbe probe)
+        /// <summary>How often the Debug tab may be rebuilt. It is diagnostics a human
+        /// reads, not a display anything depends on.</summary>
+        private static readonly TimeSpan DiagnosticsInterval = TimeSpan.FromMilliseconds(250);
+
+        private DateTime _lastDiagnostics = DateTime.MinValue;
+
+        /// <summary>
+        /// Called from LiveSplit's Update, so already on the UI thread — and therefore on
+        /// its render loop, which is why so little happens here.
+        ///
+        /// The report used to be rebuilt and pushed into the TextBox on every frame, for
+        /// as long as LiveSplit ran: a report that costs two memory reads to build, a
+        /// kilobyte of string, and a full window-text replace, 60 times a second, to show
+        /// a tab nobody had open. Now it is throttled, skipped while the page is off
+        /// screen, and only assigned when the text actually changed.
+        /// </summary>
+        public void SetStatus(string status, Infinitevania game, MemoryProbe probe, IEnumerable<string> log = null)
         {
             if (IsDisposed || !IsHandleCreated) return;
 
-            _statusLine.Text = status ?? "";
-            _diagnostics.Text = StatusReport.Describe(game, probe).Replace("\n", "\r\n");
+            string line = status ?? "";
+            if (_statusLine.Text != line) _statusLine.Text = line;
+
+            if (Parent == null || !Visible) return;
+
+            var now = DateTime.UtcNow;
+            if (now - _lastDiagnostics < DiagnosticsInterval) return;
+            _lastDiagnostics = now;
+
+            string report = StatusReport.Describe(game, probe, log).Replace("\n", "\r\n");
+            if (_diagnostics.Text != report) _diagnostics.Text = report;
         }
     }
 }

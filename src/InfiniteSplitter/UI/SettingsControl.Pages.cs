@@ -13,24 +13,19 @@ namespace InfiniteSplitter.UI
         private TabPage BuildTimerPage()
         {
             var page = new TabPage("Timer") { Padding = new Padding(8) };
-            var layout = Rows(8);
-
-            _slot.Items.AddRange(new object[] { "auto", "1", "2", "3", "4", "5" });
+            var layout = Rows(5);
 
             layout.Controls.Add(_sendIgt);
-            layout.Controls.Add(Labelled("Save slot to read:", _slot));
-            layout.Controls.Add(Note("\"auto\" follows the slot you are playing — the same test the pause menu uses."));
-            layout.Controls.Add(_pauseOnLoad);
-            layout.Controls.Add(_pauseOnPauseMenu);
-            layout.Controls.Add(Note("The game's own clock keeps running through loading screens and the pause menu; " +
-                                     "it only freezes on the main menu. With either box ticked the number here " +
-                                     "stops matching the one the game shows."));
+            layout.Controls.Add(Note("The clock is the game's own, mirrored: the slot you are playing is followed " +
+                                     "automatically, and nothing is carved out of the total. The game counts " +
+                                     "through loading screens, the pause menu and the ending — it only freezes on " +
+                                     "the main menu — so the number here is the number the game shows.\n" +
+                                     "A finished run holds the time of its last split."));
             layout.Controls.Add(_zeroAtStart);
             layout.Controls.Add(_switchToGameTime);
 
-            foreach (var box in new[] { _sendIgt, _pauseOnLoad, _pauseOnPauseMenu, _zeroAtStart, _switchToGameTime })
+            foreach (var box in new[] { _sendIgt, _zeroAtStart, _switchToGameTime })
                 box.CheckedChanged += OnEdited;
-            _slot.SelectedIndexChanged += OnEdited;
 
             page.Controls.Add(layout);
             return page;

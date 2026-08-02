@@ -34,6 +34,15 @@ namespace InfiniteSplitter.Core
         public int Count => _cfg.Splits.Count;
 
         /// <summary>
+        /// The clock at the final split, to be held for as long as the run is
+        /// <see cref="Phase.Ended"/>. The game's own clock does not stop there: it only
+        /// freezes on the main menu, so it carries on through the ending cutscene, the
+        /// credits and the results screen. A finished run has to stop following it, or
+        /// the time on the board keeps climbing after the last split landed.
+        /// </summary>
+        public double FinalIgt { get; private set; }
+
+        /// <summary>
         /// False while the reset condition is still true from before the run
         /// started. See the guard in <see cref="Tick"/>.
         /// </summary>
@@ -110,6 +119,7 @@ namespace InfiniteSplitter.Core
             Phase = Phase.Running;
             Index = 0;
             _resetArmed = false;
+            FinalIgt = 0;
             _link.Note($"start ({why})");
         }
 
@@ -123,6 +133,7 @@ namespace InfiniteSplitter.Core
             if (Index >= Count && Count > 0)
             {
                 Phase = Phase.Ended;
+                FinalIgt = igt;
                 _link.Note("run finished — autoreset is off until the next start");
             }
         }
@@ -132,7 +143,7 @@ namespace InfiniteSplitter.Core
             if (Index <= 0) return;
             _link.Undo();
             Index--;
-            if (Phase == Phase.Ended) Phase = Phase.Running;
+            if (Phase == Phase.Ended) { Phase = Phase.Running; FinalIgt = 0; }
             _link.Note($"undo -> {Index}/{Count} ({why})");
         }
 
@@ -142,6 +153,7 @@ namespace InfiniteSplitter.Core
             Phase = Phase.Idle;
             Index = 0;
             _resetArmed = false;
+            FinalIgt = 0;
             _link.Note($"reset ({why})");
         }
     }

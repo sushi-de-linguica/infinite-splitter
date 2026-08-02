@@ -117,6 +117,28 @@ the latch clears when a run starts.
 chance of misspelling either. `ending:` takes `1`, `2` or `any` and rejects
 anything else as you type it.
 
+**One ending never enters a cutscene scene.** Of the three ways out after the
+elder, one rolls the credits from the lobby without loading `final cutscene 1` or
+`2` at all — on that ending an `ending:` split does not fire, and the run never
+finishes. `credits` covers all three.
+
+**Which moment each one records.** They are seconds apart, and the gap is the
+elder's death animation, the ending transition and the load of the cutscene scene
+— the game's clock counts through all of it.
+
+| Last split | Stops the timer at | Load-dependent |
+|---|---|---|
+| `credits` | the elder's death — the same instant the game writes the time into the save file | no |
+| `ending:any` | the ending cutscene finishing loading | yes |
+| `scene:credits` | the credits scene finishing loading | yes |
+
+If you want the number on the board to match the one in the save, use `credits`.
+Only that one is measured at the same instant, and only that one does not charge
+your run for a scene load.
+
+Note that the game's own screens print `00h 18m` — hours and minutes, seconds
+truncated — so they cannot confirm anything finer than a minute either way.
+
 **Post-credits fires on almost no run.** It needs ending 2 **and** a save with
 everything finished — full map, 16 diaries, 10 heart fragments, 10 artifacts,
 every spirit. It is in the list for 100 % routes; on anything else that split

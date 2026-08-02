@@ -22,8 +22,9 @@ group failed.
 | Group | File | Pins |
 |---|---|---|
 | `mono` | `MonoTests.cs` | the accessor decoder, the PE export parser, and a full resolve against a synthetic runtime |
-| `igt` | `IgtTests.cs` | the in-game clock: advance, save-load rewind, pause exclusion, rebasing, slot resolution |
+| `igt` | `IgtTests.cs` | the in-game clock: advance, save-load rewind, mirroring, rebasing, slot resolution |
 | `newgame` | `NewGameTests.cs` | the two new-game signals and the one-tick pulse |
+| `timeline` | `TimelineTests.cs` | where the run's clock comes from, and that a finished run holds its last split |
 | `settings` | `SettingsTests.cs` | XML and INI round trips, corrupt-document fallback, migration, the Status report |
 | `scan` | `ScanTests.cs` | the pointer scanner, `PointerChain` and the read-into contract, against a synthetic address space |
 
@@ -59,10 +60,12 @@ hand back a garbage offset.
 Every case is a behaviour observed on a real run, so the reader has to reproduce
 all of them:
 
-- Loading a save rewinds the game's counter. The clock must follow it, and the
-  backwards delta must never reach the pause accumulator.
-- `pause_on_load` carves loading time out; with the option off the same sequence
-  keeps everything.
+- Loading a save rewinds the game's counter, and the clock follows it down rather
+  than holding a high-water mark — which is what lets a run survive a save / quit
+  to menu / load cycle showing the right time.
+- Nothing is carved out of the total: loading screens and the pause menu count,
+  because the game counts them. A number the player cannot check against the one
+  the game shows them is the failure this pins down.
 - The slot the player is on is picked from the game's own state, and that state
   goes briefly ambiguous while the menu's slot list is up — so the resolver keeps
   the last known slot rather than snapping back to 1 and reporting some other

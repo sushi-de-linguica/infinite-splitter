@@ -21,9 +21,6 @@ namespace InfiniteSplitter.Settings
             var cfg = new Cfg
             {
                 SendIgt = model.SendIgt,
-                Slot = model.Slot,
-                PauseOnLoad = model.PauseOnLoad,
-                PauseOnPauseMenu = model.PauseOnPauseMenu,
                 ZeroAtStart = model.ZeroAtStart,
                 SwitchToGameTime = model.SwitchToGameTime,
                 AutoStart = model.AutoStart,
@@ -80,9 +77,6 @@ namespace InfiniteSplitter.Settings
             sb.AppendLine();
             sb.AppendLine("[timer]");
             sb.AppendLine("igt = " + OnOff(model.SendIgt));
-            sb.AppendLine("slot = " + model.Slot);
-            sb.AppendLine("pause_on_load = " + OnOff(model.PauseOnLoad));
-            sb.AppendLine("pause_on_pause_menu = " + OnOff(model.PauseOnPauseMenu));
             sb.AppendLine("zero_at_start = " + OnOff(model.ZeroAtStart));
             sb.AppendLine("switch_to_gametime = " + OnOff(model.SwitchToGameTime));
             sb.AppendLine();
@@ -116,9 +110,6 @@ namespace InfiniteSplitter.Settings
             var model = new SettingsViewModel
             {
                 SendIgt = cfg.SendIgt,
-                Slot = cfg.Slot,
-                PauseOnLoad = cfg.PauseOnLoad,
-                PauseOnPauseMenu = cfg.PauseOnPauseMenu,
                 ZeroAtStart = cfg.ZeroAtStart,
                 SwitchToGameTime = cfg.SwitchToGameTime,
                 Start = cfg.Start?.Source ?? "",

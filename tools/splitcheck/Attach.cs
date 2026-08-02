@@ -174,7 +174,7 @@ namespace InfiniteSplitter.Tools
             var igt = new IgtSource();
             Console.WriteLine("watching — Ctrl+C to stop");
             Console.WriteLine();
-            Console.WriteLine($"{"igt",-14} {"raw",-14} {"slot",4} {"paused",-7} {"timePaused",-11} " +
+            Console.WriteLine($"{"igt",-14} {"raw",-14} {"slot",4} {"timePaused",-11} " +
                               $"{"loading",-8} {"uiPaused",-9} {"runs",5} {"rate",6}  scene");
             Console.WriteLine("  (rate is igt seconds per wall second — should sit at 1.000 while playing)");
 
@@ -234,8 +234,11 @@ namespace InfiniteSplitter.Tools
                     sceneShown = timePaused ? "menu (exact)" : scene + " (approx)";
                 }
 
+                // loading and uiPaused are shown but never subtracted: the clock mirrors
+                // the game's, and these are here to explain what it is doing, not to
+                // change it.
                 Console.Write($"\r{igt.Format(),-14} {Trigger.FormatTime(igt.Raw),-14} {igt.ActiveSlot,4} " +
-                              $"{igt.Paused,-7} {timePaused,-11} {loading,-8} {uiPaused,-9} " +
+                              $"{timePaused,-11} {loading,-8} {uiPaused,-9} " +
                               $"{snapshot.RunCount,5}  {rate,6:0.000}  {sceneShown,-24}");
 
                 if (snapshot.RunCount != lastRunCount && lastRunCount >= 0)
