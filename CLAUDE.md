@@ -81,8 +81,12 @@ works. `./build.sh` is an alias for `make all`.
 ## Things that look like bugs and are not
 
 - `GameManager.instance == 0` on the title screen: the singleton is not up yet.
-- `runs = -1` until the first new game of a session — the counter's storage does
-  not exist before then.
+- `runs = -1` until the game has logged a run this session — the counter's
+  storage does not exist before then. Nothing depends on it; it is a Debug-tab
+  cross-check, not a signal.
+- Game Time reading behind the game's own pause-menu number: that is load
+  removal, on by default. The Debug tab shows the raw clock and how much has been
+  removed side by side.
 - A scene reading `(approx)`: the live read did not resolve and the fallback is
   in use. Splits will land late, visibly — except on scenes the game never saves
   in (the two endings and the credits), which the fallback cannot report at all.

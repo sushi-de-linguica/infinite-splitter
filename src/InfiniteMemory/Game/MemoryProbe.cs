@@ -131,23 +131,47 @@ namespace InfiniteSplitter.Game
         ///    keyed on entering an area lands at the next checkpoint. Kept so a Unity
         ///    update degrades visibly rather than lying.
         /// </summary>
-        public string Scene
-        {
-            get
-            {
-                string native = _game.Scene.Read(_game.Memory);
-                if (native.Length > 0) return native;
+        public string Scene => ResolveScene(_game.Scene.Read(_game.Memory), Alive, InMenu, SceneChanging, LastSaved);
 
-                if (_snapshot == null || !_snapshot.GameManagerAlive || _gameFields == null) return "";
-                if (_gameFields.TimePaused != null && _snapshot.Bool(_gameFields.TimePaused)) return "menu";
-                if (_gameFields.CurrentScene == null) return "";
-                return MonoReader.ReadString(_game.Memory, _snapshot.Pointer(_gameFields.CurrentScene));
-            }
+        /// <summary>
+        /// The ladder's decision, pure so the offline suite can pin it.
+        ///
+        /// The fourth rung is the one that matters. Mid-transition the native read goes
+        /// dark for a window, and <paramref name="lastSaved"/> still names wherever the
+        /// game last wrote a save — an area the run may never have entered. Answering
+        /// with it fires that area's split on the way out of an unrelated scene, so a
+        /// transition answers nothing at all instead.
+        /// </summary>
+        public static string ResolveScene(string native, bool gameManagerAlive, bool inMenu,
+                                          bool sceneChanging, string lastSaved)
+        {
+            if (!string.IsNullOrEmpty(native)) return native;
+            if (!gameManagerAlive) return "";
+            if (inMenu) return "menu";
+            if (sceneChanging) return "";
+            return lastSaved ?? "";
         }
 
+        private bool Alive => _snapshot != null && _snapshot.GameManagerAlive && _gameFields != null;
+
+        private bool InMenu =>
+            Alive && _gameFields.TimePaused != null && _snapshot.Bool(_gameFields.TimePaused);
+
+        /// <summary>Either kind of load in flight — the same pair the clock carves out.</summary>
+        private bool SceneChanging =>
+            Alive && ((_gameFields.Loading != null && _snapshot.Bool(_gameFields.Loading))
+                      || _snapshot.SceneLoadInFlight);
+
+        private string LastSaved =>
+            !Alive || _gameFields.CurrentScene == null
+                ? ""
+                : MonoReader.ReadString(_game.Memory, _snapshot.Pointer(_gameFields.CurrentScene));
+
         /// <summary>Where <see cref="Scene"/> is coming from, for the Debug tab.
-        /// "native" is exact; "approx" means splits land late.</summary>
-        public string SceneSource => _game.Scene.Resolved ? "native" : "approx";
+        /// "native" is exact; "changing" means a transition is in flight and nothing is
+        /// being answered; "approx" means splits land late.</summary>
+        public string SceneSource =>
+            _game.Scene.Resolved ? "native" : !InMenu && SceneChanging ? "changing" : "approx";
 
         public bool Credits => _creditsSeen;
 

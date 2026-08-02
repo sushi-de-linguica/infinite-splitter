@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using InfiniteSplitter.Core;
+using InfiniteSplitter.Game;
 using static InfiniteSplitter.Tools.Check;
 
 namespace InfiniteSplitter.Tools
@@ -21,9 +22,42 @@ namespace InfiniteSplitter.Tools
             bad += EndingPicksTheRightCutscene();
             bad += EndingScenesAreInTheBuildList();
             bad += EndingRejectsAnythingElse();
+            bad += SceneLadder();
 
             Console.WriteLine(bad == 0 ? "  ok" : $"  {bad} failure(s)");
             Console.WriteLine();
+            return bad;
+        }
+
+        /// <summary>
+        /// Which source answers `scene:`, and — the case this exists for — when none of
+        /// them may. Quitting a run to the menu split a route's `scene:forest` because
+        /// the native read goes dark for a window mid-transition and the managed
+        /// fallback still named the area of the last save, which was forest. A scene
+        /// nobody is in must never answer.
+        /// </summary>
+        private static int SceneLadder()
+        {
+            int bad = 0;
+            var cases = new[]
+            {
+                // native,   alive, inMenu, changing, lastSaved,  expected
+                ("forest",   true,  false,  false,    "lobby",    "forest"),   // native wins outright
+                ("forest",   true,  true,   true,     "lobby",    "forest"),   // even mid-transition
+                ("",         false, false,  false,    "forest",   ""),         // no singleton, no answer
+                ("",         true,  true,   true,     "forest",   "menu"),     // the menu is exact
+                ("",         true,  false,  true,     "forest",   ""),         // THE BUG: was "forest"
+                ("",         true,  false,  false,    "lobby",    "lobby"),    // settled: the approximation
+                ("",         true,  false,  false,    null,       ""),
+            };
+
+            foreach (var (native, alive, inMenu, changing, lastSaved, expected) in cases)
+            {
+                string got = MemoryProbe.ResolveScene(native, alive, inMenu, changing, lastSaved);
+                if (got != expected)
+                    bad += Fail($"scene ladder (native '{native}', alive {alive}, menu {inMenu}, " +
+                                $"changing {changing}, saved '{lastSaved}') gave '{got}', want '{expected}'");
+            }
             return bad;
         }
 

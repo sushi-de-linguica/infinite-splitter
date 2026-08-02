@@ -20,10 +20,46 @@ namespace InfiniteSplitter.Tools
             bad += FinishedRunHoldsItsLastSplit();
             bad += UndoResumesFollowingTheClock();
             bad += StartAndResetClearTheHeldTime();
+            bad += ARestartCountsAsANewAttempt();
 
             Console.WriteLine(bad == 0 ? "  ok" : $"  {bad} failure(s)");
             Console.WriteLine();
             return bad;
+        }
+
+        /// <summary>
+        /// A new game restarting a run in progress goes Running -> Running, so the phase
+        /// never moves. The component rebases the clock per attempt, and reading that
+        /// off the phase edge meant a restart kept the previous attempt's removed-load
+        /// total — which pinned its clock at zero for as long as that total.
+        /// </summary>
+        private static int ARestartCountsAsANewAttempt()
+        {
+            var cfg = Cfg.Parse("[run]\nstart = newgame\nreset = never\nrestart_on_new_game = on\n" +
+                                "[splits]\nSword = flag:sword\nEnd = credits\n");
+            int bad = Expect(cfg.Ok, "the fixture config parsed: " + string.Join("; ", cfg.Errors));
+
+            var timeline = new Timeline(cfg, new RecordingLink());
+            bad += Expect(timeline.StartCount == 0, "nothing started yet");
+
+            var probe = new FlagProbe();
+
+            probe.NewGame = true;
+            timeline.Tick(probe);
+            bad += Expect(timeline.Phase == Phase.Running, "the first new game started a run");
+            bad += Expect(timeline.StartCount == 1, "attempt count " + timeline.StartCount);
+
+            // Playing on. Nothing here is a new attempt.
+            probe.NewGame = false;
+            for (int tick = 0; tick < 5; tick++) timeline.Tick(probe);
+            bad += Expect(timeline.StartCount == 1, "playing on is not a new attempt");
+
+            // Quit to the menu and start another game: the run restarts in place.
+            probe.NewGame = true;
+            timeline.Tick(probe);
+            bad += Expect(timeline.Phase == Phase.Running, "still running after the restart");
+            return bad + Expect(timeline.StartCount == 2,
+                "a restart has to count as an attempt, got " + timeline.StartCount);
         }
 
         /// <summary>
@@ -134,7 +170,7 @@ namespace InfiniteSplitter.Tools
             public int CountPrefix(string prefix) => 0;
             public string Scene => "";
             public bool Credits => false;
-            public bool NewGame => false;
+            public bool NewGame { get; set; }
             public void ReportUnknown(string what) { }
         }
     }

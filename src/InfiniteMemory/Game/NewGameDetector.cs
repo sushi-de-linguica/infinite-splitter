@@ -1,81 +1,88 @@
 namespace InfiniteSplitter.Game
 {
     /// <summary>
-    /// Turns "the player just started a new game" into a one-tick pulse. Two signals,
-    /// because neither is sufficient alone:
+    /// Turns "the player just started a new game" into a one-tick pulse.
     ///
-    /// 1. The run list gets one longer. It covers every way a run can be started, and
-    ///    being a level rather than an edge, a slow poll cannot miss it.
-    /// 2. A slot clock reading ~0 while the game reports itself paused on the menu.
-    ///    Needed because the first new game of a session is invisible to signal 1: the
-    ///    counter goes from unavailable straight to 1, with no baseline to have risen
-    ///    from. A loaded save always carries its own elapsed time, so this state is
-    ///    unambiguous.
+    /// The signal is the active scene leaving the menu without a save having been
+    /// loaded during that visit. Leaving the menu is the only way into a run, and it
+    /// is also the frame the game's own clock starts on, so a run started here reads
+    /// 0:00.000 rather than picking up a fraction of the fade.
+    ///
+    /// A save load is told apart by <c>loading</c>, which the game raises a full
+    /// second before it starts the scene load and lowers a frame into the destination.
+    /// Latching it for the whole menu visit rather than sampling it at the transition
+    /// is what makes the distinction independent of the poll rate.
+    ///
+    /// Two signals this deliberately does not use: a slot clock reading zero (a new
+    /// game does not zero every slot, so it both misses and false-positives — and on
+    /// the menu, before the game has read the saves off disk, every clock reads zero),
+    /// and the run counter rising (unreadable until the first new game of a session,
+    /// and it would fire a third of a second earlier than the scene edge — two
+    /// different start points across attempts is worse than one late one).
     /// </summary>
     public sealed class NewGameDetector
     {
         private int _lastRunCount = -1;
-        private bool _clockArmed = true;
+        private bool _wasTimePaused;
+        private bool _loadSeenThisMenuVisit;
 
         /// <summary>True for exactly one tick after a new game began.</summary>
         public bool Pulse { get; private set; }
 
-        /// <summary>Which signal produced the last pulse, for the Debug tab.</summary>
+        /// <summary>What the last menu exit was, for the Debug tab.</summary>
         public string Source { get; private set; } = "none";
 
-        /// <summary>Whether the run counter is readable at all this session.</summary>
+        /// <summary>Whether a save load has been seen since the menu came up. Debug tab.</summary>
+        public bool LoadSeenThisMenuVisit => _loadSeenThisMenuVisit;
+
+        /// <summary>Whether the run counter is readable at all this session. Diagnostic
+        /// only — it does not feed the pulse.</summary>
         public bool RunLoggerAvailable => _lastRunCount >= 0;
+
+        /// <summary>The run counter as last seen, or -1. Diagnostic only.</summary>
+        public int RunCount => _lastRunCount;
 
         public void Reset()
         {
             _lastRunCount = -1;
-            _clockArmed = true;
+            _wasTimePaused = false;
+            _loadSeenThisMenuVisit = false;
             Pulse = false;
             Source = "none";
         }
 
         /// <summary>Called once per tick, before the timeline runs.</summary>
-        public void Update(int runCount, double rawIgt, bool timePaused, bool gameManagerAlive)
+        public void Update(int runCount, bool timePaused, bool loading, bool gameManagerAlive)
         {
             Pulse = false;
-            if (!gameManagerAlive) return;
+            if (runCount >= 0) _lastRunCount = runCount;
 
-            // Armed/disarmed rather than edge-triggered: the fresh-clock state persists
-            // for dozens of frames before the first gameplay scene comes up, and would
-            // otherwise pulse on every one.
-            bool freshClock = timePaused && rawIgt < 1.0;
-            if (!freshClock)
+            if (!gameManagerAlive)
             {
-                _clockArmed = true;
-            }
-            else if (_clockArmed)
-            {
-                _clockArmed = false;
-                _lastRunCount = runCount;      // adopt whatever the counter says now
-                Pulse = true;
-                Source = "clock reset on the menu";
+                _wasTimePaused = false;
+                _loadSeenThisMenuVisit = false;
                 return;
             }
 
-            // The RunLogger signal, exact once the class has been touched.
-            if (runCount < 0) return;
-
-            if (_lastRunCount < 0)
+            if (timePaused)
             {
-                _lastRunCount = runCount;   // first readable value: no baseline, no pulse
-                return;
+                if (!_wasTimePaused) _loadSeenThisMenuVisit = false;
+                if (loading) _loadSeenThisMenuVisit = true;
+            }
+            else if (_wasTimePaused)
+            {
+                if (!_loadSeenThisMenuVisit && !loading)
+                {
+                    Pulse = true;
+                    Source = "new game";
+                }
+                else
+                {
+                    Source = "loaded a save";
+                }
             }
 
-            if (runCount > _lastRunCount)
-            {
-                _lastRunCount = runCount;
-                Pulse = true;
-                Source = "RunLogger run count";
-            }
-            else if (runCount < _lastRunCount)
-            {
-                _lastRunCount = runCount;      // the file was cleared out from under us
-            }
+            _wasTimePaused = timePaused;
         }
     }
 }

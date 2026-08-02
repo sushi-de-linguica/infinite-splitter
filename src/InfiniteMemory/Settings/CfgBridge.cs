@@ -21,6 +21,7 @@ namespace InfiniteSplitter.Settings
             var cfg = new Cfg
             {
                 SendIgt = model.SendIgt,
+                RemoveLoads = model.RemoveLoads,
                 ZeroAtStart = model.ZeroAtStart,
                 SwitchToGameTime = model.SwitchToGameTime,
                 AutoStart = model.AutoStart,
@@ -77,6 +78,7 @@ namespace InfiniteSplitter.Settings
             sb.AppendLine();
             sb.AppendLine("[timer]");
             sb.AppendLine("igt = " + OnOff(model.SendIgt));
+            sb.AppendLine("remove_loads = " + OnOff(model.RemoveLoads));
             sb.AppendLine("zero_at_start = " + OnOff(model.ZeroAtStart));
             sb.AppendLine("switch_to_gametime = " + OnOff(model.SwitchToGameTime));
             sb.AppendLine();
@@ -110,6 +112,7 @@ namespace InfiniteSplitter.Settings
             var model = new SettingsViewModel
             {
                 SendIgt = cfg.SendIgt,
+                RemoveLoads = cfg.RemoveLoads,
                 ZeroAtStart = cfg.ZeroAtStart,
                 SwitchToGameTime = cfg.SwitchToGameTime,
                 Start = cfg.Start?.Source ?? "",

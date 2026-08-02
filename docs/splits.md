@@ -168,7 +168,7 @@ defaults rather than splits. `always`, `igt:`, `collectible:`, `activation:` and
 | `scene:NAME` | the active scene | `scene:volcano` |
 | `ending:N` | which ending is playing — `1`, `2` or `any` | `ending:any` |
 | `credits` (or `end`) | latches on the elder's death | `credits` |
-| `newgame` | one tick, when a run starts | `newgame` |
+| `newgame` | one tick, when the game leaves the menu into a new run | `newgame` |
 | `igt:OP TIME` | the clock being sent to LiveSplit | `igt:>=1:30:00` |
 | `always` / `never` | constants | `reset = never` |
 
@@ -220,9 +220,12 @@ See [splitcheck.md](splitcheck.md).
   it saves, so the split will land at the next checkpoint instead.
 - **`collectible:` and `activation:` are latches, not events.** An id appears
   once and stays for the rest of the run.
-- **`newgame` is a one-tick pulse.** With `restart_on_new_game` on it restarts a
-  run in progress, which is what makes `reset = never` usable: the run then
-  survives save / quit / load, and only a genuinely fresh run clears it.
+- **`newgame` is a one-tick pulse.** It fires when the game leaves the menu into
+  a run that is not a loaded save, so a run starts on the frame the game's own
+  clock does — Game Time reads 0:00.000, not part of the fade. With
+  `restart_on_new_game` on it restarts a run in progress, which is what makes
+  `reset = never` usable: the run then survives save / quit / load, and only a
+  genuinely fresh run clears it. See [architecture.md](architecture.md).
 
 ## Recipes
 

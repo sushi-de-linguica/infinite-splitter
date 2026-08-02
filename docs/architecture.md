@@ -41,8 +41,8 @@ reads the wrong field is worse than one that refuses to start.
 ```
 TryRefresh          attach if needed; cheap liveness check if already attached
 TakeSnapshot        two bulk reads of the objects we watch, plus the run count
-IgtSource.Update    the game's five slot clocks -> one number, mirrored as-is
-NewGameDetector     run count and fresh-clock signals -> a one-tick pulse
+IgtSource.Update    the game's five slot clocks -> one number, less loading
+NewGameDetector     leaving the menu without a save load -> a one-tick pulse
 MemoryProbe.Bind    point the trigger language at this tick's snapshot
 Timeline.Tick       new game > reset > start > split, at most one action
 TimerModelLink      drive LiveSplit, with the reentrancy guard raised
@@ -110,6 +110,76 @@ So `TimerModelLink.SetGameTime` re-asserts the flag on every write. That method 
 the single funnel for both the per-tick push and the writes `Timeline` makes
 around a split, which is why the invariant is enforced there rather than in the
 component's `Update`.
+
+## When a run starts
+
+The `newgame` pulse fires when the active scene leaves the menu without a save
+having been loaded during that visit. Both halves are load-bearing:
+
+- **Leaving the menu** is the only way into a run — nothing in the game restarts
+  one from inside — and it is also the frame the game's own clock starts
+  counting on, so a run that starts here reads 0:00.000 rather than picking up
+  part of the fade.
+- **A save load raises `GameManager.loading`** a full second before the scene
+  load begins and lowers it a frame into the destination. `NewGameDetector`
+  latches that for the whole menu visit instead of sampling it at the
+  transition, which is what makes the distinction independent of the poll rate:
+  a slow tick can easily land after the flag has cleared, and the load would
+  then read as a new game.
+
+Two signals that look usable and are not. A slot clock reading zero: a new game
+does not zero every slot, so it both misses and false-positives — and on the
+menu, before the game has read the saves off disk, every clock reads zero, which
+is why an earlier version of this started the timer the moment the game was
+launched. The run counter rising: its storage does not exist until the first new
+game of a session, and it would fire a third of a second ahead of the scene
+edge, giving two different start points across attempts. It is still read, but
+only to be shown in the Debug tab.
+
+## Load removal
+
+`remove_loads` carves loading back out of the mirrored clock. It has to be us
+that does it, because the game's own clock does not: it runs on unscaled time and
+only freezes on the menu, so every load is in the in-game total.
+
+Two signals, because the game has two kinds of load and only reports one of them
+as such:
+
+- `GameManager.loading` — loading a save, from the menu or after a death,
+  including the second the game waits before starting the scene load.
+- `UIManager.currentScene` non-empty — portals between areas, cross-scene fast
+  travel, quitting to the menu, cutscene loads. The field is empty in every
+  scene as shipped and is written only by the transition entry points, before
+  the fade; the destination scene brings up its own `UIManager` with the field
+  empty again, so non-empty means exactly "a transition was started and has not
+  completed". Only its length is read.
+
+The second has to be discarded while the menu is up: the menu has no `UIManager`
+of its own, so the read is the previous scene's and stays set the whole time. The
+clock is frozen there anyway, so nothing is miscounted either way, but
+`IgtSource.Excluding` would otherwise misreport what it is doing.
+
+Only a plausible tick's worth of time may feed the accumulator. A negative delta
+is a save being loaded; a large positive one is the counter being read having
+been swapped for another slot's. Neither is time that passed.
+
+The total belongs to one attempt, so the component rebases the clock on
+`Timeline.StartCount` changing rather than on the phase reaching Running. A new
+game restarting a run in progress — the default, and what quitting to the menu
+and starting again does — goes Running to Running, so the phase edge never
+fires. Missing it left each attempt carrying every previous attempt's removed
+load, and `Value` is clamped at zero, so the new run's clock sat at 0:00 until
+the game's counter passed that total.
+
+The pause menu is deliberately not removed: the game counts it, the player can
+see it on the screen they paused from, and a number they cannot check against the
+game's own is worse than a slightly longer one. Loading is the exception because
+there is no screen to check it against.
+
+Deliberately not used as signals: `UIManager.canPause`, which is also false
+during healing, ghost dash, hitstop, dialogue, every pickup, every checkpoint and
+every upgrade panel; and the respawn-animation flag, which is equally true for
+the spike and lava death animations, which are gameplay.
 
 ## The trigger language
 

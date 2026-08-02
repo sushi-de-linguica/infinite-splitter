@@ -21,13 +21,24 @@ Steam must be running for the game to resolve its save folder.
 Later versions install the same way, or arrive through LiveSplit's own updater
 under Help > Check for Updates.
 
+## Out of the box
+
+The timer starts when you start a new game and not a moment before — the menu
+and continuing a save leave it alone. Quitting to the menu mid-run does not throw
+the run away; only a new game does, and that one opens a fresh attempt.
+
+Loading screens and the transitions between areas are removed from Game Time, so
+it reads behind the number the game's own pause menu shows. The Debug tab prints
+both and how much was removed; the Timer tab turns it off if you would rather
+they matched exactly.
+
 ## Using it
 
 The settings dialog has five tabs:
 
 | Tab | |
 |---|---|
-| Timer | whether to drive Game Time from the game's clock, and where it starts |
+| Timer | whether to drive Game Time from the game's clock, what to remove from it, and where it starts |
 | Run | when a run starts, splits and resets |
 | Splits | the split list, with presets for the common conditions |
 | Advanced | the whole configuration as editable text |

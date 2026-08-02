@@ -28,6 +28,11 @@ namespace InfiniteSplitter.Game
         /// <summary>RunLogger's run count: rises by one per new game. -1 when unavailable.</summary>
         public int RunCount { get; internal set; } = -1;
 
+        /// <summary>Whether a scene transition has been started and has not completed.
+        /// Filled by <see cref="Infinitevania.TakeSnapshot"/>, which is the layer that
+        /// can follow the string pointer out of the snapshot.</summary>
+        public bool SceneLoadInFlight { get; internal set; }
+
         internal void SetGameManager(long address, byte[] bytes)
         {
             GameManagerAddress = address;
@@ -45,6 +50,7 @@ namespace InfiniteSplitter.Game
             GameManager = UIManager = null;
             GameManagerAddress = UIManagerAddress = 0;
             RunCount = -1;
+            SceneLoadInFlight = false;
         }
 
         public bool Bool(MonoFieldRef field) => Byte(GameManager, field) != 0;
@@ -59,6 +65,9 @@ namespace InfiniteSplitter.Game
 
         public long Pointer(MonoFieldRef field) =>
             TryAt(GameManager, field, sizeof(long), out int at) ? BitConverter.ToInt64(GameManager, at) : 0L;
+
+        public long PointerUI(MonoFieldRef field) =>
+            TryAt(UIManager, field, sizeof(long), out int at) ? BitConverter.ToInt64(UIManager, at) : 0L;
 
         /// <summary>
         /// A field as a double, whatever numeric type it is. False for anything that is

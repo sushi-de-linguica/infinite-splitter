@@ -34,6 +34,7 @@ namespace InfiniteSplitter.UI
 
         // timer
         private readonly CheckBox _sendIgt = new CheckBox { AutoSize = true, Text = "Feed LiveSplit's Game Time from the game's clock" };
+        private readonly CheckBox _removeLoads = new CheckBox { AutoSize = true, Text = "Remove loading time from the clock" };
         private readonly CheckBox _zeroAtStart = new CheckBox { AutoSize = true, Text = "Start the clock from zero, whatever the save held" };
         private readonly CheckBox _switchToGameTime = new CheckBox { AutoSize = true, Text = "Switch LiveSplit's timer to Game Time on attach" };
 
@@ -122,6 +123,7 @@ namespace InfiniteSplitter.UI
             try
             {
                 _sendIgt.Checked = _model.SendIgt;
+                _removeLoads.Checked = _model.RemoveLoads;
                 _zeroAtStart.Checked = _model.ZeroAtStart;
                 _switchToGameTime.Checked = _model.SwitchToGameTime;
 
@@ -144,6 +146,7 @@ namespace InfiniteSplitter.UI
             if (_loading) return;
 
             _model.SendIgt = _sendIgt.Checked;
+            _model.RemoveLoads = _removeLoads.Checked;
             _model.ZeroAtStart = _zeroAtStart.Checked;
             _model.SwitchToGameTime = _switchToGameTime.Checked;
 
@@ -190,7 +193,8 @@ namespace InfiniteSplitter.UI
         /// a tab nobody had open. Now it is throttled, skipped while the page is off
         /// screen, and only assigned when the text actually changed.
         /// </summary>
-        public void SetStatus(string status, Infinitevania game, MemoryProbe probe, IEnumerable<string> log = null)
+        public void SetStatus(string status, Infinitevania game, MemoryProbe probe,
+                              IgtSource igt = null, IEnumerable<string> log = null)
         {
             if (IsDisposed || !IsHandleCreated) return;
 
@@ -203,7 +207,7 @@ namespace InfiniteSplitter.UI
             if (now - _lastDiagnostics < DiagnosticsInterval) return;
             _lastDiagnostics = now;
 
-            string report = StatusReport.Describe(game, probe, log).Replace("\n", "\r\n");
+            string report = StatusReport.Describe(game, probe, igt, log).Replace("\n", "\r\n");
             if (_diagnostics.Text != report) _diagnostics.Text = report;
         }
     }

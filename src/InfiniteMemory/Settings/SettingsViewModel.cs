@@ -41,6 +41,12 @@ namespace InfiniteSplitter.Settings
 
         // [timer]
         public bool SendIgt = true;
+
+        /// <summary>Defaults on, and a layout stored before this existed has no element
+        /// for it — so the deserializer leaves this initializer standing and everyone
+        /// gets it without a migration.</summary>
+        public bool RemoveLoads = true;
+
         public bool ZeroAtStart;
         public bool SwitchToGameTime = true;
 

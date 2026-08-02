@@ -172,11 +172,13 @@ namespace InfiniteSplitter.Tools
         private static int Watch(Infinitevania game)
         {
             var igt = new IgtSource();
+            var detector = new NewGameDetector();
             Console.WriteLine("watching — Ctrl+C to stop");
             Console.WriteLine();
-            Console.WriteLine($"{"igt",-14} {"raw",-14} {"slot",4} {"timePaused",-11} " +
-                              $"{"loading",-8} {"uiPaused",-9} {"runs",5} {"rate",6}  scene");
+            Console.WriteLine($"{"igt",-14} {"raw",-14} {"cut",-14} {"slot",4} {"timePaused",-11} " +
+                              $"{"loading",-8} {"sceneLoad",-10} {"uiPaused",-9} {"runs",5} {"rate",6}  scene");
             Console.WriteLine("  (rate is igt seconds per wall second — should sit at 1.000 while playing)");
+            Console.WriteLine("  (cut is the loading time removed so far, so raw - cut = igt)");
 
             int lastRunCount = -1;
             bool explainedRunCount = false;
@@ -207,9 +209,6 @@ namespace InfiniteSplitter.Tools
                 igt.Update(snapshot, fields);
                 if (igtAtStart < 0 && igt.Value > 0) { igtAtStart = igt.Value; wall.Restart(); }
 
-                // The clock's rate, measured rather than assumed. Far from 1.000 while
-                // playing means the wrong field or the wrong slot; the game itself only
-                // loses about a frame a minute.
                 double rate = wall.Elapsed.TotalSeconds > 1 && igtAtStart >= 0
                     ? (igt.Value - igtAtStart) / wall.Elapsed.TotalSeconds
                     : 0;
@@ -218,8 +217,6 @@ namespace InfiniteSplitter.Tools
                 bool loading = fields.Loading != null && snapshot.Bool(fields.Loading);
                 bool uiPaused = fields.UiPaused != null && snapshot.UIManagerAlive && snapshot.BoolUI(fields.UiPaused);
 
-                // Falling back is a visible state, not a silent one: "(approx)" means
-                // currentScene, which only updates when the game saves.
                 string native = game.Scene.Read(game.Memory);
                 string sceneShown;
                 if (native.Length > 0)
@@ -234,23 +231,25 @@ namespace InfiniteSplitter.Tools
                     sceneShown = timePaused ? "menu (exact)" : scene + " (approx)";
                 }
 
-                // loading and uiPaused are shown but never subtracted: the clock mirrors
-                // the game's, and these are here to explain what it is doing, not to
-                // change it.
-                Console.Write($"\r{igt.Format(),-14} {Trigger.FormatTime(igt.Raw),-14} {igt.ActiveSlot,4} " +
-                              $"{timePaused,-11} {loading,-8} {uiPaused,-9} " +
+                detector.Update(snapshot.RunCount, timePaused, loading, snapshot.GameManagerAlive);
+
+                Console.Write($"\r{igt.Format(),-14} {Trigger.FormatTime(igt.Raw),-14} " +
+                              $"{Trigger.FormatTime(igt.Excluded),-14} {igt.ActiveSlot,4} " +
+                              $"{timePaused,-11} {loading,-8} {snapshot.SceneLoadInFlight,-10} {uiPaused,-9} " +
                               $"{snapshot.RunCount,5}  {rate,6:0.000}  {sceneShown,-24}");
 
-                if (snapshot.RunCount != lastRunCount && lastRunCount >= 0)
-                    Console.WriteLine($"\n  *** run count {lastRunCount} -> {snapshot.RunCount} (new game) ***");
+                if (detector.Pulse)
+                    Console.WriteLine($"\n  *** new game detected ({detector.Source}) ***");
+                else if (snapshot.RunCount != lastRunCount && lastRunCount >= 0)
+                    Console.WriteLine($"\n  *** run count {lastRunCount} -> {snapshot.RunCount} " +
+                                      $"(the game logged a run; detector says '{detector.Source}') ***");
 
-                // runs == -1 is a state, not a fault: RunLogger's static constructor
-                // only runs when Menu.PlayGame first touches it, so after loading a save
-                // its storage genuinely does not exist yet.
+                // runs == -1 is a state, not a fault, and nothing depends on it: the
+                // column is here to cross-check the detector, not to feed it.
                 if (snapshot.RunCount < 0 && !explainedRunCount)
                 {
-                    Console.WriteLine("\n  note: runs = -1 — RunLogger has not been touched this session " +
-                                      "(start a new game and it appears).");
+                    Console.WriteLine("\n  note: runs = -1 — the game has not logged a run this session. " +
+                                      "New-game detection does not use it.");
                     explainedRunCount = true;
                 }
                 lastRunCount = snapshot.RunCount;
@@ -287,8 +286,9 @@ namespace InfiniteSplitter.Tools
 
                 game.TakeSnapshot();
                 igt.Update(game.Snapshot, game.Fields);
-                probe.NewGameDetector.Update(game.Snapshot.RunCount, igt.Raw,
+                probe.NewGameDetector.Update(game.Snapshot.RunCount,
                     game.Fields.TimePaused != null && game.Snapshot.Bool(game.Fields.TimePaused),
+                    game.Fields.Loading != null && game.Snapshot.Bool(game.Fields.Loading),
                     game.Snapshot.GameManagerAlive);
                 probe.Bind(game.Snapshot, game.Fields, igt.Value);
 

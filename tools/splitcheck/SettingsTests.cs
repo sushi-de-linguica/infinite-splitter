@@ -26,6 +26,7 @@ namespace InfiniteSplitter.Tools
             bad += IniRoundTrip();
             bad += ImportsAConfigWithUnusedSections();
             bad += RetiredFieldsInAStoredLayoutAreIgnored();
+            bad += LoadRemovalIsOnByDefault();
             bad += DefaultsBuildAValidCfg();
             bad += EveryPresetParses();
             bad += ScenePresetsNameRealScenes();
@@ -151,8 +152,8 @@ End            = credits
             foreach (var problem in problems)
                 if (!problem.StartsWith("warning:")) { Console.WriteLine("  ERROR importing: " + problem); bad++; }
 
-            bad += Expect(problems.Exists(p => p.Contains("pause_on_load")),
-                "the retired pause_on_load is reported rather than silently dropped");
+            bad += Expect(problems.Exists(p => p.Contains("pause_on_load") && p.Contains("remove_loads")),
+                "the retired pause_on_load is reported and points at its replacement");
             bad += Expect(problems.Exists(p => p.Contains("slot")),
                 "the retired slot is reported rather than silently dropped");
             bad += Expect(model.Reset == "never", "reset came across");
@@ -178,7 +179,27 @@ End            = credits
             var model = SettingsViewModel.Deserialize(stored);
             int bad = Expect(model.Splits.Count == 1, "the splits survived: " + model.Splits.Count);
             bad += Expect(model.ZeroAtStart, "a setting after the removed ones still came across");
-            return bad;
+
+            // A setting added after the layout was stored has no element to read, so
+            // it keeps its default — which is how load removal reaches an existing
+            // install without a migration.
+            return bad + Expect(model.RemoveLoads, "a setting the document predates keeps its default");
+        }
+
+        private static int LoadRemovalIsOnByDefault()
+        {
+            int bad = Expect(SettingsViewModel.CreateDefault().RemoveLoads, "a fresh model removes loads");
+            bad += Expect(CfgBridge.ToCfg(SettingsViewModel.CreateDefault(), out _).RemoveLoads,
+                "the default cfg removes loads");
+            bad += Expect(Cfg.Parse(Cfg.Default).RemoveLoads, "the shipped cfg removes loads");
+
+            // Turning it back off has to survive, or the default would be a one-way door.
+            var off = SettingsViewModel.CreateDefault();
+            off.RemoveLoads = false;
+            bad += Expect(!SettingsViewModel.Deserialize(off.Serialize()).RemoveLoads,
+                "an explicit 'off' survives the XML round trip");
+            return bad + Expect(!CfgBridge.FromIni(CfgBridge.ToIni(off), out _).RemoveLoads,
+                "an explicit 'off' survives the INI round trip");
         }
 
         private static int DefaultsBuildAValidCfg()

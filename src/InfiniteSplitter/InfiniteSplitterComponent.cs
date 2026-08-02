@@ -47,6 +47,9 @@ namespace InfiniteSplitter
 
         private int _consecutiveFaults;
 
+        /// <summary>The attempt the clock was last rebased for. See the check in Update.</summary>
+        private int _lastStart;
+
         private readonly LiveSplitState _state;
         private readonly TimerModel _timerModel;
         private readonly TimerModelLink _link;
@@ -80,6 +83,7 @@ namespace InfiniteSplitter
             _settings = SettingsViewModel.CreateDefault();
             _cfg = CfgBridge.ToCfg(_settings, out _);
             _timeline = new Timeline(_cfg, _link);
+            _igt.RemoveLoads = _cfg.RemoveLoads;
 
             _settingsControl = new SettingsControl { Model = _settings };
             _settingsControl.SettingsChanged += (sender, e) => _rebuildPending = true;
@@ -110,23 +114,19 @@ namespace InfiniteSplitter
                 _igt.Update(snapshot, fields);
 
                 bool timePaused = fields.TimePaused != null && snapshot.Bool(fields.TimePaused);
-                _probe.NewGameDetector.Update(snapshot.RunCount, _igt.Raw, timePaused, snapshot.GameManagerAlive);
+                bool loading = fields.Loading != null && snapshot.Bool(fields.Loading);
+                _probe.NewGameDetector.Update(snapshot.RunCount, timePaused, loading, snapshot.GameManagerAlive);
                 _probe.Bind(snapshot, fields, _igt.Value);
 
-                var before = _timeline.Phase;
                 _link.Guarded(() => _timeline.Tick(_probe));
 
-                if (_timeline.Phase == Phase.Running && before != Phase.Running)
+                if (_timeline.StartCount != _lastStart)
                 {
+                    _lastStart = _timeline.StartCount;
                     _igt.Rebase(_cfg.ZeroAtStart, snapshot, fields);
                     _probe.OnRunStarted();
                 }
 
-                // Written on every tick even once the run is over, because that is what
-                // holds the claim on Game Time: stop writing and LiveSplit free-runs it
-                // on real time between our writes. What a finished run changes is the
-                // value, not the cadence — it holds the clock at its last split instead
-                // of following the game's, which keeps counting through the ending.
                 if (_cfg.SendIgt && _timeline.Phase != Phase.Idle)
                     _link.SetGameTime(_timeline.Phase == Phase.Ended ? _timeline.FinalIgt : _igt.Value);
 
@@ -168,6 +168,9 @@ namespace InfiniteSplitter
             _settings = _settingsControl.Model;
             _cfg = CfgBridge.ToCfg(_settings, out var problems);
             _timeline = new Timeline(_cfg, _link);
+            _igt.RemoveLoads = _cfg.RemoveLoads;
+
+            _lastStart = _timeline.StartCount;
 
             if (_settings.SwitchToGameTime)
                 _state.CurrentTimingMethod = TimingMethod.GameTime;
@@ -209,7 +212,7 @@ namespace InfiniteSplitter
             _log.Add(message);
         }
 
-        private void SetStatus(string message) => _settingsControl?.SetStatus(message, _game, _probe, _log);
+        private void SetStatus(string message) => _settingsControl?.SetStatus(message, _game, _probe, _igt, _log);
 
         public Control GetSettingsControl(LayoutMode mode) => _settingsControl;
 
@@ -221,8 +224,6 @@ namespace InfiniteSplitter
                 var fragment = document.CreateDocumentFragment();
                 fragment.InnerXml = _settingsControl.Model.Serialize();
 
-                // Drop the XML declaration the serializer emits; it cannot appear
-                // inside LiveSplit's own document.
                 foreach (XmlNode child in fragment.ChildNodes)
                     if (child.NodeType == XmlNodeType.Element)
                     {

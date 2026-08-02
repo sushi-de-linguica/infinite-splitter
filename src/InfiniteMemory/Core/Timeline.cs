@@ -31,6 +31,14 @@ namespace InfiniteSplitter.Core
 
         public Phase Phase { get; private set; } = Phase.Idle;
         public int Index { get; private set; }
+
+        /// <summary>
+        /// How many attempts have been started. The caller watches this rather than the
+        /// phase, because a new game restarting a run already in progress goes
+        /// Running -> Running: the attempt is new but the phase never moved, and
+        /// anything keyed on that edge would carry the old attempt's state into it.
+        /// </summary>
+        public int StartCount { get; private set; }
         public int Count => _cfg.Splits.Count;
 
         /// <summary>
@@ -120,6 +128,7 @@ namespace InfiniteSplitter.Core
             Index = 0;
             _resetArmed = false;
             FinalIgt = 0;
+            StartCount++;
             _link.Note($"start ({why})");
         }
 

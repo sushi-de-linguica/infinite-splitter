@@ -23,7 +23,8 @@ namespace InfiniteSplitter.Game
         /// It is printed even with nothing attached, because a fault during the attach
         /// is exactly what the reader is looking for at that point.
         /// </summary>
-        public static string Describe(Infinitevania game, MemoryProbe probe, IEnumerable<string> log = null)
+        public static string Describe(Infinitevania game, MemoryProbe probe,
+                                      IgtSource igt = null, IEnumerable<string> log = null)
         {
             var sb = new StringBuilder();
             if (game == null || !game.IsHooked || game.Runtime == null)
@@ -53,10 +54,33 @@ namespace InfiniteSplitter.Game
                 if (game.Scene.Winner != null)
                     sb.AppendLine($"  chain            {game.Scene.Winner}");
             }
-            sb.AppendLine($"new game source    {probe?.NewGameDetector.Source ?? "-"}" +
-                          (probe != null && !probe.NewGameDetector.RunLoggerAvailable
-                              ? "  (run counter not available yet this session)"
+            if (igt != null)
+            {
+                sb.AppendLine($"clock raw          {Core.Trigger.FormatTime(igt.Raw)}  (slot {igt.ActiveSlot})");
+                sb.AppendLine($"clock sent         {igt.Format()}");
+                sb.AppendLine($"loads removed      " + (igt.RemoveLoads
+                    ? Core.Trigger.FormatTime(igt.Excluded) + (igt.Excluding ? "  — removing right now" : "")
+                    : "off"));
+            }
+
+            var snapshot = game.Snapshot;
+            var fields = game.Fields;
+            bool loading = fields?.Loading != null && snapshot.Bool(fields.Loading);
+            bool inMenu = fields?.TimePaused != null && snapshot.Bool(fields.TimePaused);
+            sb.AppendLine("load in flight     " +
+                          (loading ? "loading a save"
+                           : !inMenu && snapshot.SceneLoadInFlight ? "scene transition"
+                           : "no"));
+
+            var detector = probe?.NewGameDetector;
+            sb.AppendLine($"new game source    {detector?.Source ?? "-"}" +
+                          (detector != null && detector.LoadSeenThisMenuVisit
+                              ? "  (a save was loaded during this menu visit)"
                               : ""));
+            sb.AppendLine("run counter        " +
+                          (detector == null || !detector.RunLoggerAvailable
+                              ? "not available yet this session"
+                              : detector.RunCount + "  (diagnostic only)"));
 
             if (runtime.Probe.Overrides.Count > 0)
             {

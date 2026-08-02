@@ -20,4 +20,4 @@ One file, nothing else to copy. Later versions can be installed the same way, or
 picked up by LiveSplit's own updater under Help > Check for Updates.
 
 If a split does not fire, open Layout Settings > InfiniteSplitter > Debug: it
-reports what the component found and what it is reading right now.
+reports what the component found and what it is reading right now.

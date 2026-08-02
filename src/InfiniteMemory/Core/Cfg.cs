@@ -33,6 +33,7 @@ namespace InfiniteSplitter.Core
 
         // [timer]
         public bool SendIgt = true;
+        public bool RemoveLoads = true;         // carve loading and scene transitions out of the clock
         public bool ZeroAtStart;                // subtract the IGT captured when the run starts
         public bool SwitchToGameTime = true;    // make LiveSplit's main timer show game time
 
@@ -133,6 +134,7 @@ namespace InfiniteSplitter.Core
                 case "server.reconnect_seconds": ReconnectSeconds = Num(value, ReconnectSeconds, lineNo, "server.reconnect_seconds"); return;
 
                 case "timer.igt": SendIgt = Bool(value, SendIgt, lineNo, "timer.igt"); return;
+                case "timer.remove_loads": RemoveLoads = Bool(value, RemoveLoads, lineNo, "timer.remove_loads"); return;
                 case "timer.zero_at_start": ZeroAtStart = Bool(value, ZeroAtStart, lineNo, "timer.zero_at_start"); return;
                 case "timer.switch_to_gametime": SwitchToGameTime = Bool(value, SwitchToGameTime, lineNo, "timer.switch_to_gametime"); return;
 
@@ -151,14 +153,16 @@ namespace InfiniteSplitter.Core
                 case "hotkeys.reset": KeyReset = value; return;
 
                 // Retired. Named rather than left to fall through to "unknown setting",
-                // so an older config is told what happened to them: the clock is a
-                // straight mirror of the game's now, which leaves no slot to choose and
-                // nothing to carve out.
-                case "timer.slot":
+                // so an older config is told what happened to them.
                 case "timer.pause_on_load":
+                    Warnings.Add($"line {lineNo}: '[timer] pause_on_load' is now 'remove_loads', which covers " +
+                                 "scene transitions as well as save loads; ignored — set remove_loads instead");
+                    return;
+
+                case "timer.slot":
                 case "timer.pause_on_pause_menu":
-                    Warnings.Add($"line {lineNo}: '[timer] {key}' no longer exists — the clock always mirrors " +
-                                 "the game's, following the slot in play; ignored");
+                    Warnings.Add($"line {lineNo}: '[timer] {key}' no longer exists — the clock mirrors the " +
+                                 "game's, following the slot in play, and only loading is carved out; ignored");
                     return;
             }
 
@@ -224,6 +228,7 @@ port = 16834
 
 [timer]
 igt = on
+remove_loads = on
 
 [run]
 start = newgame

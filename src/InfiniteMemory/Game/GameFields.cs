@@ -29,6 +29,10 @@ namespace InfiniteSplitter.Game
         /// <summary>On UIManager, not GameManager.</summary>
         public MonoFieldRef UiPaused;
 
+        /// <summary>On UIManager. Non-empty exactly while a scene transition is in
+        /// flight — see docs/architecture.md.</summary>
+        public MonoFieldRef UiCurrentScene;
+
         public int GameManagerExtent;
         public int UIManagerExtent;
 
@@ -59,6 +63,10 @@ namespace InfiniteSplitter.Game
             {
                 fields.UiPaused = uiManager.Find("paused");
                 if (fields.UiPaused == null) fields.Missing.Add("UIManager.paused");
+
+                fields.UiCurrentScene = uiManager.Find("currentScene");
+                if (fields.UiCurrentScene == null) fields.Missing.Add("UIManager.currentScene");
+
                 fields.UIManagerExtent = uiManager.InstanceExtent();
             }
 

@@ -183,6 +183,26 @@ namespace InfiniteSplitter.Game
                 Fill(ref _uiManagerBuffer, uiManager, Fields.UIManagerExtent));
 
             Snapshot.RunCount = ReadRunCount();
+            Snapshot.SceneLoadInFlight = ReadSceneLoadInFlight();
+        }
+
+        /// <summary>
+        /// Whether a scene transition is in flight, from the destination name the game
+        /// parks on UIManager for the duration. Only its length is read: the value is
+        /// never needed, and one extra ReadInt32 keeps the per-tick cost flat.
+        ///
+        /// The caller has to discard this while the menu is up — see
+        /// docs/architecture.md for why it reads stale there.
+        /// </summary>
+        private bool ReadSceneLoadInFlight()
+        {
+            var field = Fields?.UiCurrentScene;
+            if (field == null || !Snapshot.UIManagerAlive) return false;
+
+            long text = Snapshot.PointerUI(field);
+            if (text == 0) return false;
+
+            return _hook.ReadInt32(text + MonoReader.StringLengthOffset) > 0;
         }
 
         /// <summary>

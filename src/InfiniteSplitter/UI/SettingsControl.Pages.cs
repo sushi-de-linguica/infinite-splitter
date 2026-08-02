@@ -13,18 +13,22 @@ namespace InfiniteSplitter.UI
         private TabPage BuildTimerPage()
         {
             var page = new TabPage("Timer") { Padding = new Padding(8) };
-            var layout = Rows(5);
+            var layout = Rows(7);
 
             layout.Controls.Add(_sendIgt);
             layout.Controls.Add(Note("The clock is the game's own, mirrored: the slot you are playing is followed " +
-                                     "automatically, and nothing is carved out of the total. The game counts " +
-                                     "through loading screens, the pause menu and the ending — it only freezes on " +
-                                     "the main menu — so the number here is the number the game shows.\n" +
+                                     "automatically. The game counts through loading screens, the pause menu and " +
+                                     "the ending — it only freezes on the main menu.\n" +
                                      "A finished run holds the time of its last split."));
+            layout.Controls.Add(_removeLoads);
+            layout.Controls.Add(Note("Takes loading screens and the transitions between areas back out of the " +
+                                     "total, which the game itself does not. With this on the clock reads behind " +
+                                     "the number the game's pause menu shows; the Debug tab prints both, and how " +
+                                     "much has been removed."));
             layout.Controls.Add(_zeroAtStart);
             layout.Controls.Add(_switchToGameTime);
 
-            foreach (var box in new[] { _sendIgt, _zeroAtStart, _switchToGameTime })
+            foreach (var box in new[] { _sendIgt, _removeLoads, _zeroAtStart, _switchToGameTime })
                 box.CheckedChanged += OnEdited;
 
             page.Controls.Add(layout);
