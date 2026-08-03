@@ -290,7 +290,7 @@ namespace InfiniteSplitter.Tools
                     double total = _slot1 + Math.Min(Step, left);
                     int hours = (int)(total / 3600);
                     int minutes = (int)((total - hours * 3600) / 60);
-                    SetClock(1, hours, minutes, (float)(total - hours * 3600 - minutes * 60));
+                    SetClock(1, hours, minutes, (float)(total - hours * 3600.0 - minutes * 60.0));
                     Igt.Update(Snapshot, Fields);
                 }
             }
