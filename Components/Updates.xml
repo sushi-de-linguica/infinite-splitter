@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LiveSplit's update manifest.
+
+  How it is used: the factory's XMLURL points at this file on
+  raw.githubusercontent.com, LiveSplit compares the newest <update version> here
+  against the version compiled into InfiniteSplitter.dll, and downloads each
+  <file path> from UpdateURL + path. So the paths below are repository-relative,
+  and the DLLs they name have to be COMMITTED under Components/ — the updater
+  fetches the built artefacts from the repo, not from a GitHub release.
+
+  Newest version first; LiveSplit reads the list in order.
+-->
+<updates>
+    <update version="1.0.1">
+        <files>
+            <file path="Components/InfiniteSplitter.dll" status="changed"/>
+        </files>
+        <changelog>
+            <change>Loading screens and the transitions between areas are now removed from Game Time, on by default. Turn it off in the Timer tab to match the game's own number exactly.</change>
+            <change>The timer starts on a new game and not before: sitting on the menu no longer starts it, and continuing a save leaves it alone.</change>
+            <change>Quitting to the menu mid-run no longer splits on the area of your last save.</change>
+            <change>Restarting a run no longer held the new attempt's clock at zero for the loading time removed from earlier attempts.</change>
+            <change>The Debug tab now shows the raw clock, the time sent to LiveSplit, and how much loading was removed.</change>
+        </changelog>
+    </update>
+    <update version="1.0.0">
+        <files>
+            <file path="Components/InfiniteSplitter.dll" status="changed"/>
+        </files>
+        <changelog>
+            <change>A run now ends on the ending you choose rather than on the elder's death — the default route's last split is ending:any.</change>
+            <change>New ending: trigger, taking 1, 2 or any, for splitting on which of the two endings a run took.</change>
+            <change>New End presets: Any ending, Ending 1, Ending 2, Credits roll, and Post-credits for 100 % routes.</change>
+            <change>New Area preset: Enter Lobby.</change>
+        </changelog>
+    </update>
+    <update version="0.1.0">
+        <files>
+            <file path="Components/InfiniteSplitter.dll" status="changed"/>
+        </files>
+        <changelog>
+            <change>First release.</change>
+            <change>Ships as a single DLL: one file to copy into LiveSplit's Components folder.</change>
+            <change>In-game time driven into LiveSplit's Game Time, read from the game's memory with nothing installed into the game folder.</change>
+            <change>Auto-splitting on a configurable trigger language over flags, skills, collectibles, activations and scenes.</change>
+            <change>The active scene is read live, so scene: splits fire at the door rather than at the next save.</change>
+        </changelog>
+    </update>
+</updates>

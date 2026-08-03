@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The LiveSplit component. net481 because the LiveSplit 1.8.37 assemblies we
+    compile against are themselves net481, and referencing them from net48 fails
+    to resolve.
+
+    The plain Microsoft.NET.Sdk, never Microsoft.NET.Sdk.WindowsDesktop and never
+    <UseWindowsForms> / <UseWPF>: those pull in Windows-only MSBuild targets that
+    cannot run on Linux. Referencing System.Windows.Forms by name and letting
+    Microsoft.NETFramework.ReferenceAssemblies resolve it builds fine from WSL.
+
+    The consequence, and it is deliberate: no .resx, no .Designer.cs, no
+    ApplicationIcon. Every control is constructed in code.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <AssemblyName>InfiniteSplitter</AssemblyName>
+    <RootNamespace>InfiniteSplitter</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <!-- AnyCPU, not x64: LiveSplit 1.8.x is 64-bit on 64-bit Windows, but AnyCPU
+         cannot fail to load. A 32-bit host is rejected at runtime with a clear
+         HostNot64Bit error rather than silently truncating pointers. -->
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Version>1.0.1</Version>
+    <!-- CS0436: the vendored LiveSplit assemblies overlap type names with ours -->
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference assemblies only; nothing from this package ships. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net481" Version="1.0.3" PrivateAssets="all" />
+
+    <!-- Build-time only. Merges InfiniteMemory into this assembly on Release so a
+         user copies one file; ILRepack.targets next to this file drives it. -->
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.46" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Compile-time only. At runtime these come from LiveSplit itself, which is
+         why Private is false: they must never be copied next to our DLL. -->
+    <Reference Include="LiveSplit.Core">
+      <HintPath>../../packages/LiveSplit.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UpdateManager">
+      <HintPath>../../packages/UpdateManager.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../InfiniteMemory/InfiniteMemory.csproj" />
+  </ItemGroup>
+
+</Project>

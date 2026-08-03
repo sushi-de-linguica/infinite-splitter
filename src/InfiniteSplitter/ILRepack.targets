@@ -1,0 +1,62 @@
+<Project>
+
+  <!--
+    Merges InfiniteMemory into InfiniteSplitter so a user has exactly one file to
+    copy. Half an install is the failure mode this removes: two DLLs meant the
+    second could be forgotten, and the CLR's complaint about a missing assembly
+    names something nobody has heard of.
+
+    The package imports this file when it exists and then disables its own default
+    target, which merges $(OutputPath)*.dll by wildcard. Naming the inputs instead
+    means a missing InfiniteMemory fails the build rather than silently shipping an
+    unmerged assembly.
+
+    The target must NOT be called `ILRepack`: the package declares a target of that
+    name *after* importing this file, and a later definition wins, so the merge
+    would silently never run.
+
+    Release only. A Debug build keeps the assemblies separate, which is what lets
+    a debugger step into InfiniteMemory with its own symbols.
+  -->
+
+  <Target Name="MergeInfiniteMemory"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' and '$(IsCrossTargetingBuild)' != 'true'">
+
+    <PropertyGroup>
+      <MergedName>$(OutputPath)$(TargetName)$(TargetExt)</MergedName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- Primary first: it decides the assembly identity, the entry attributes
+           and the target framework of the result. -->
+      <MergeInputs Include="$(OutputPath)$(TargetName)$(TargetExt)" />
+      <MergeInputs Include="$(OutputPath)InfiniteMemory.dll" />
+
+      <!-- ILRepack resolves every assembly the inputs reference, including the ones
+           deliberately not copied to the output (LiveSplit.Core, UpdateManager) and
+           the net481 reference assemblies. Derive the search path from the
+           references MSBuild already resolved rather than hardcoding directories. -->
+      <MergeSearchDirs Include="@(ReferencePath->'%(RootDir)%(Directory)'->Distinct())" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('$(OutputPath)InfiniteMemory.dll')"
+           Text="InfiniteMemory.dll is not in $(OutputPath) — nothing to merge. The project reference did not copy." />
+
+    <!-- Not internalized: SettingsControl.Model is public and typed from
+         InfiniteMemory, so making those types internal would leave a public
+         member exposing an inaccessible type. Nothing here is a library anyone
+         compiles against, so the wider surface costs nothing. -->
+    <ILRepack Parallel="true"
+              DebugInfo="true"
+              InputAssemblies="@(MergeInputs)"
+              LibraryPath="@(MergeSearchDirs)"
+              TargetKind="SameAsPrimaryAssembly"
+              OutputFile="$(MergedName)" />
+
+    <!-- Leave nothing behind that looks installable: a stale InfiniteMemory.dll
+         in the output would get copied to Components/ and confuse the picture. -->
+    <Delete Files="$(OutputPath)InfiniteMemory.dll;$(OutputPath)InfiniteMemory.pdb" />
+  </Target>
+
+</Project>
