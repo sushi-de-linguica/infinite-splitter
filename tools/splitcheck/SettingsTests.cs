@@ -103,7 +103,7 @@ namespace InfiniteSplitter.Tools
                 if (!problem.StartsWith("warning:")) { Console.WriteLine("  ERROR ini: " + problem); bad++; }
 
             bad += Expect(restored.ZeroAtStart, "ZeroAtStart survived the INI round trip");
-            bad += Expect(restored.SendIgt == false, "SendIgt survived");
+            bad += Expect(!restored.SendIgt, "SendIgt survived");
             bad += Expect(restored.Reset == "scene:menu", "Reset survived");
             bad += Expect(restored.Splits.Count == model.Splits.Count,
                 $"split count {restored.Splits.Count} vs {model.Splits.Count}");
